@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(netstat -ano)",
+      "Bash(findstr 4173)",
+      "Bash(taskkill /PID 44764 /F)",
+      "Bash(cmd.exe //c \"taskkill /PID 44764 /F\")",
+      "Bash(netstat -aon)",
+      "Bash(findstr :4173)",
+      "Bash(taskkill /PID 240180 /F)",
+      "Bash(powershell -Command \"Stop-Process -Id 240180 -Force\")"
+    ]
+  }
+}

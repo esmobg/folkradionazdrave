@@ -1,0 +1,83 @@
+{
+  "baseUrl": "http://127.0.0.1:4280",
+  "checkedAt": "2026-03-25T12:49:03.180Z",
+  "desktop": {
+    "initialHeading": "Поп-фолк, фолклор и балкански ритми в едно живо онлайн радио.",
+    "initialLang": "bg",
+    "initialShellClass": "page-shell mode-dark palette-heritage",
+    "initialStatus": "Плеърът е на пауза.",
+    "heritageAccent": "#cf5429",
+    "goldAccent": "#d79a18",
+    "oliveAccent": "#5a6620",
+    "lightShellClass": "page-shell mode-light palette-olive",
+    "appearanceStorage": {
+      "themeMode": "light",
+      "paletteId": "olive"
+    },
+    "englishHeading": "Pop-folk, folk, and Balkan rhythms in one live online radio.",
+    "englishLang": "en",
+    "socialLinks": [
+      {
+        "text": "Facebook",
+        "href": "https://www.facebook.com/folkradionazdrave",
+        "rel": "noreferrer noopener"
+      },
+      {
+        "text": "YouTube",
+        "href": "https://www.youtube.com/@dimitarzahariev8926",
+        "rel": "noreferrer noopener"
+      },
+      {
+        "text": "TikTok",
+        "href": "https://www.tiktok.com/@mitaka.power",
+        "rel": "noreferrer noopener"
+      }
+    ],
+    "skipLinkFocus": {
+      "text": "Към съдържанието",
+      "href": "#main-content"
+    },
+    "aboutVisible": true,
+    "playerStatus": "Плеърът свири.",
+    "playerButtonText": "Пауза",
+    "mutePressed": true,
+    "muteReset": true,
+    "sliderAfterSet": {
+      "value": "40",
+      "label": "40%"
+    },
+    "pausedStatus": "Плеърът е на пауза.",
+    "resumedStatus": "Плеърът свири.",
+    "muteShortcutPressed": true,
+    "muteShortcutReset": true,
+    "volumeBeforeKeys": {
+      "value": "40",
+      "label": "40%"
+    },
+    "volumeAfterDown": {
+      "value": "30",
+      "label": "30%"
+    },
+    "volumeAfterUp": {
+      "value": "40",
+      "label": "40%"
+    },
+    "goldTitle": "Gold Radio",
+    "goldSubtitle": "Музика, облечена в злато",
+    "goldNoteVisible": true,
+    "goldStatus": "Плеърът свири.",
+    "goldButtonText": "Пауза"
+  },
+  "mobile": {
+    "clientWidth": 390,
+    "scrollWidth": 390,
+    "hasHorizontalOverflow": false,
+    "followVisible": true
+  },
+  "tablet": {
+    "headingVisible": true,
+    "playerVisible": true
+  },
+  "failures": [],
+  "passed": true
+}
