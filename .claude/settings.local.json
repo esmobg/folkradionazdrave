@@ -10,7 +10,19 @@
       "Bash(netstat -aon)",
       "Bash(findstr :4173)",
       "Bash(taskkill /PID 240180 /F)",
-      "Bash(powershell -Command \"Stop-Process -Id 240180 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 240180 -Force\")",
+      "Bash(gh auth:*)",
+      "Bash(where gh:*)",
+      "Bash(powershell -Command \"Get-Command gh -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(powershell -Command \"winget install GitHub.cli --accept-package-agreements --accept-source-agreements\")",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh --version)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)",
+      "Bash(powershell -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' auth status\")",
+      "WebFetch(domain:online-radio.radioexpert.net)",
+      "WebSearch",
+      "WebFetch(domain:onlineradiobox.com)",
+      "WebFetch(domain:streema.com)"
     ]
   }
 }
