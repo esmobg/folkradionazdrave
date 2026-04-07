@@ -18,7 +18,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const isDevelopment = !isProduction;
 const port = Number(process.env.PORT || 4173);
 
-const NAZDRAVE_STREAM_URL = "https://radionazdrave.replit.app/api/stream";
+const NAZDRAVE_STREAM_URL = "http://78.83.177.106:8000/;";
 const NAZDRAVE_NOW_PLAYING_URL = "https://radionazdrave.replit.app/api/now-playing";
 const GOLD_RADIO_STREAMS = ["http://92.247.130.252:8030", "http://78.83.177.106:8020"];
 const curlCommand = process.platform === "win32" ? "curl.exe" : "curl";
@@ -306,7 +306,7 @@ app.get("/api/now-playing/nazdrave", async (_req, res) => {
 });
 
 app.get("/api/stream/nazdrave", async (_req, res) => {
-  await proxyStream([NAZDRAVE_STREAM_URL], res);
+  await proxyLegacyIcyStream([NAZDRAVE_STREAM_URL], res);
 });
 
 app.get("/api/stream/gold", async (_req, res) => {
