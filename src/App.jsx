@@ -201,7 +201,6 @@ function App() {
 
     const onWaiting = () => setIsLoading(true);
     const onPause = () => {
-      clearRetryTimer();
       setIsLoading(false);
       setIsPlaying(false);
     };
@@ -221,7 +220,6 @@ function App() {
       clearRetryTimer();
       scheduleRetry(selectedStationRef.current, streamIndexRef.current);
     };
-
     audio.addEventListener("playing", onPlaying);
     audio.addEventListener("waiting", onWaiting);
     audio.addEventListener("pause", onPause);
@@ -409,7 +407,7 @@ function App() {
 
   function scheduleRetry(stationId, streamIndex) {
     const nextStreamIndex = getRetryStreamIndex(stationId, streamIndex);
-    const retryDelay = nextStreamIndex === streamIndex ? 12000 : 5000;
+    const retryDelay = nextStreamIndex === streamIndex ? 5000 : 3000;
 
     retryTimerRef.current = window.setTimeout(() => {
       void attemptPlayback(stationId, nextStreamIndex);
@@ -444,9 +442,9 @@ function App() {
 
     try {
       audio.pause();
-      audio.src = streamUrl;
+      const cacheBuster = streamUrl.includes("?") ? `&_t=${Date.now()}` : `?_t=${Date.now()}`;
+      audio.src = streamUrl + cacheBuster;
       audio.load();
-
       scheduleRetry(stationId, streamIndex);
       await audio.play();
     } catch {
