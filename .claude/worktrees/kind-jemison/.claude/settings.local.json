@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "WebFetch(domain:www.figma.com)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:4173)",
+      "Bash(npx vite build --mode development)",
+      "Bash(curl -s http://127.0.0.1:4173)",
+      "Bash(node -e \"import\\(''./src/content.js''\\).then\\(m => console.log\\(''content.js OK: '' + Object.keys\\(m.content.bg\\).length + '' bg keys, '' + Object.keys\\(m.content.en\\).length + '' en keys''\\)\\).catch\\(e => console.error\\(''content.js ERROR:'', e.message\\)\\)\")",
+      "Bash(node -e \":*)",
+      "Bash(npx vite build)",
+      "Bash(taskkill //F //PID 433900)"
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-04-14T12:55:46.975Z",
+  "build": true,
+  "auditPassed": true,
+  "i18nPassed": true,
+  "manualPassed": true,
+  "accessibilityPassed": true,
+  "productionReady": true
+}

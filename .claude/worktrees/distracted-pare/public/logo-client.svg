@@ -1,0 +1,57 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#F7F3EB" />
+  <g transform="translate(140 70)">
+    <g stroke="#4A260C" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M174 192C142 190 103 212 92 258L56 422C45 473 74 526 123 539L244 571C296 585 348 553 360 501L396 335C409 282 376 229 323 220L174 192Z" fill="#E6A41B"/>
+      <path d="M559 201C527 198 488 220 478 266L443 428C433 480 462 533 511 545L628 576C680 590 731 559 743 507L778 344C790 291 757 238 705 229L559 201Z" fill="#E6A41B"/>
+      <path d="M118 293C67 290 30 314 21 363C12 412 36 457 76 467" fill="none"/>
+      <path d="M722 307C776 302 816 324 826 372C838 425 814 469 772 480" fill="none"/>
+      <path d="M120 240C137 183 188 151 242 162C297 173 340 213 351 268" fill="#F6E6B5"/>
+      <path d="M505 250C519 192 566 159 620 168C675 177 719 217 733 274" fill="#F6E6B5"/>
+      <path d="M166 163C176 130 210 110 244 117C270 95 307 101 325 130C361 126 394 149 401 183C437 183 468 208 473 242C449 258 427 266 400 266H186C151 266 119 248 101 223C108 192 134 170 166 163Z" fill="#FBF4DE"/>
+      <path d="M553 170C564 138 598 118 631 126C657 103 695 110 712 138C749 133 781 156 789 189C825 190 855 214 860 247C837 262 814 271 788 271H573C538 271 507 252 489 227C496 197 522 176 553 170Z" fill="#FBF4DE"/>
+      <path d="M260 245L238 483" fill="#FFFDF7"/>
+      <path d="M648 255L626 491" fill="#FFFDF7"/>
+    </g>
+
+    <g fill="#4A260C">
+      <path d="M115 98C93 111 79 141 82 170C85 196 106 213 133 213C151 213 167 205 177 192V81L115 98Z"/>
+      <path d="M732 97C730 145 729 174 725 207C739 219 755 226 773 226C799 226 821 209 824 184C828 153 812 124 788 112L732 97Z"/>
+      <path d="M851 572C834 583 823 605 825 627C828 648 844 663 867 663C882 663 894 657 902 647V558L851 572Z"/>
+    </g>
+
+    <g stroke="#4A260C" stroke-width="18" stroke-linecap="round">
+      <path d="M476 35L476 81"/>
+      <path d="M423 59L397 97"/>
+      <path d="M531 59L557 97"/>
+    </g>
+
+    <g transform="translate(708 170)">
+      <path d="M27 11C46 16 63 32 72 54L93 124L126 112C149 104 172 108 189 124C205 139 212 161 206 183L180 279L161 420C159 441 142 456 121 456H114C91 456 73 439 74 416L84 281L52 298C25 313 -8 299 -16 270C-22 247 -12 220 10 208L68 176L46 92C37 58 20 31 0 15L27 11Z" fill="#B44B2E" stroke="#4A260C" stroke-width="18" stroke-linejoin="round"/>
+      <path d="M138 95L167 15C175 -8 198 -23 221 -19C246 -14 262 8 260 33C258 59 242 82 219 92L138 95Z" fill="#E3A91D" stroke="#4A260C" stroke-width="18" stroke-linejoin="round"/>
+      <path d="M117 204L164 197" stroke="#E3A91D" stroke-width="12" stroke-linecap="round"/>
+      <path d="M101 262L148 255" stroke="#E3A91D" stroke-width="12" stroke-linecap="round"/>
+      <path d="M81 320L126 313" stroke="#E3A91D" stroke-width="12" stroke-linecap="round"/>
+      <path d="M46 393L119 382" stroke="#E3A91D" stroke-width="12" stroke-linecap="round"/>
+      <rect x="23" y="298" width="112" height="78" rx="8" fill="#E3A91D" stroke="#4A260C" stroke-width="16"/>
+      <path d="M49 337H111" stroke="#B44B2E" stroke-width="14"/>
+      <path d="M80 306V368" stroke="#B44B2E" stroke-width="14"/>
+    </g>
+
+    <g fill="#FFF1B8" opacity="0.7">
+      <circle cx="170" cy="367" r="11"/>
+      <circle cx="205" cy="433" r="11"/>
+      <circle cx="253" cy="397" r="11"/>
+      <circle cx="300" cy="457" r="11"/>
+      <circle cx="575" cy="388" r="11"/>
+      <circle cx="615" cy="455" r="11"/>
+      <circle cx="657" cy="415" r="11"/>
+      <circle cx="688" cy="475" r="11"/>
+    </g>
+  </g>
+
+  <g transform="translate(90 670)">
+    <text x="420" y="90" text-anchor="middle" fill="#6D741D" font-size="106" font-family="Georgia, 'Times New Roman', serif" font-weight="700" letter-spacing="2">ФОЛК РАДИО</text>
+    <text x="420" y="255" text-anchor="middle" fill="#C94725" font-size="158" font-family="Georgia, 'Times New Roman', serif" font-weight="700" letter-spacing="4">НАЗДРАВЕ</text>
+  </g>
+</svg>

@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-04-14T12:56:29.955Z",
+  "baseUrl": "http://127.0.0.1:4280",
+  "passed": true,
+  "checks": {
+    "skipLinkFirstFocus": true,
+    "htmlLangSwitches": true,
+    "themeRadioKeyboard": true,
+    "stationRadioKeyboard": true,
+    "noMobileOverflow": true,
+    "keyboardPlaybackToggle": true,
+    "keyboardMuteToggle": true,
+    "keyboardVolumeChange": true,
+    "stickyPlayerAppears": true
+  },
+  "failedChecks": []
+}

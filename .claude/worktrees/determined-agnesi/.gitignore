@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local Netlify folder
+.netlify
+
+# Temporary files
+tmp/
+output/
+
+# Playwright
+.playwright-cli/

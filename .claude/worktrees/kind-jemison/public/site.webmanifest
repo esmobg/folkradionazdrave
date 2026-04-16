@@ -1,0 +1,23 @@
+{
+  "name": "Folk Radio Nazdrave",
+  "short_name": "Nazdrave",
+  "description": "Accessible bilingual pop-folk radio web app.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#160815",
+  "theme_color": "#160815",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-client.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "folk-radio-nazdrave",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "build": "vite build",
+    "preview": "node server.mjs --production",
+    "check:i18n": "node scripts/check-i18n.mjs --report reviews/i18n-results.json",
+    "qa:manual": "node scripts/run-manual-qa.mjs",
+    "review:all": "node scripts/run-agent-reviews.mjs",
+    "ci:review": "node scripts/run-agent-reviews.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "playwright": "^1.58.2",
+    "vite": "^7.1.10"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(netstat -ano)",
+      "Bash(findstr 4173)",
+      "Bash(taskkill /PID 44764 /F)",
+      "Bash(cmd.exe //c \"taskkill /PID 44764 /F\")",
+      "Bash(netstat -aon)",
+      "Bash(findstr :4173)",
+      "Bash(taskkill /PID 240180 /F)",
+      "Bash(powershell -Command \"Stop-Process -Id 240180 -Force\")",
+      "Bash(gh auth:*)",
+      "Bash(where gh:*)",
+      "Bash(powershell -Command \"Get-Command gh -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(powershell -Command \"winget install GitHub.cli --accept-package-agreements --accept-source-agreements\")",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh --version)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" auth status)",
+      "Bash(powershell -Command \"& ''C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe'' auth status\")",
+      "WebFetch(domain:online-radio.radioexpert.net)",
+      "WebSearch",
+      "WebFetch(domain:onlineradiobox.com)",
+      "WebFetch(domain:streema.com)",
+      "WebFetch(domain:folkradionazdrave.com)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type}\" --connect-timeout 5 --max-time 8 \"http://78.83.177.106:8000/;\")",
+      "Bash(curl.exe --http0.9 -s -o /dev/null -w \"%{http_code} %{content_type} %{size_download}\" --connect-timeout 5 --max-time 3 \"http://78.83.177.106:8000/;\")",
+      "Bash(curl.exe --http0.9 -s -D - -o /dev/null --max-time 2 \"http://78.83.177.106:8000/;\")",
+      "Bash(curl.exe -s --http0.9 -D - --max-time 2 \"http://78.83.177.106:8000/;\")",
+      "Bash(curl.exe -s --http0.9 --dump-header - --max-time 2 -o NUL \"http://78.83.177.106:8000/;\")",
+      "Bash(node -e \":*)",
+      "Bash(curl.exe -s -w \"\\\\n%{http_code}\" --max-time 5 \"https://folkradionazdrave.com/api/stream/nazdrave\")",
+      "Bash(curl.exe -s -w \"\\\\n%{http_code}\" --max-time 5 \"https://folkradionazdrave.com/api/stream/gold\")",
+      "Bash(curl.exe -s -w \"\\\\n%{http_code}\" \"https://folkradionazdrave.com/.netlify/functions/nazdrave-stream\" --max-time 5)",
+      "Bash(curl.exe -s -w \"\\\\n%{http_code}\" \"https://folkradionazdrave.com/.netlify/functions/gold-stream\" --max-time 5)",
+      "Bash(curl.exe --http0.9 -s -o /dev/null -w \"%{http_code} %{size_download}\" --connect-timeout 5 --max-time 3 \"http://92.247.130.252:8030\")",
+      "Bash(curl.exe --http0.9 -s -o /dev/null -w \"%{http_code} %{size_download}\" --connect-timeout 5 --max-time 3 \"http://78.83.177.106:8020\")"
+    ]
+  }
+}

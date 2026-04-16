@@ -1,0 +1,26 @@
+{
+  "name": "Folk Radio Nazdrave",
+  "short_name": "Nazdrave",
+  "description": "Bold and accessible bilingual folk radio web app.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1d120f",
+  "theme_color": "#1d120f",
+  "categories": ["music", "entertainment"],
+  "lang": "bg",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+[build]
+command = "npm run build"
+publish = "dist"
+
+[functions]
+directory = "netlify/functions"
+
+[build.environment]
+VITE_GOLD_STREAM_URL = "/api/stream/gold"
+VITE_NAZDRAVE_STREAM_URL = "/api/stream/nazdrave"
+
+[[redirects]]
+from = "/api/stream/nazdrave"
+to = "/.netlify/functions/nazdrave-stream"
+status = 200
+force = true
+
+[[redirects]]
+from = "/api/now-playing/nazdrave"
+to = "https://radionazdrave.replit.app/api/now-playing"
+status = 200
+force = true
+
+[[redirects]]
+from = "/api/stream/gold"
+to = "/.netlify/functions/gold-stream"
+status = 200
+force = true
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
+
+[[headers]]
+for = "/*"
+
+[headers.values]
+Content-Security-Policy = "default-src 'self'; connect-src 'self'; media-src 'self' blob:; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+Permissions-Policy = "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+Referrer-Policy = "no-referrer"
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
