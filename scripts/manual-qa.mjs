@@ -2,14 +2,66 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium, devices } from "playwright";
 import { content } from "../src/content.js";
+import { writeFileWithRetry } from "./review-utils.mjs";
 
 const baseUrl = process.env.QA_BASE_URL || "http://127.0.0.1:4173";
 const outputDir = path.resolve("reviews", "screenshots");
 const reportPath = path.resolve("reviews", "manual-qa-results.json");
 const bg = content.bg;
+const MAX_PLAYBACK_STARTUP_MS = 6000;
 
 async function ensureDir(dir) {
   await fs.mkdir(dir, { recursive: true });
+}
+
+async function takeScreenshotWithRetry(page, screenshotPath, options = {}) {
+  const attempts = options.attempts ?? 4;
+  const screenshotOptions = { ...options };
+  delete screenshotOptions.attempts;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await page.screenshot({ path: screenshotPath, ...screenshotOptions });
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isRetriableFsError = /UNKNOWN: unknown error, open|EBUSY|EPERM|EACCES/i.test(message);
+
+      if (!isRetriableFsError || attempt === attempts) {
+        throw error;
+      }
+
+      await page.waitForTimeout(180 * attempt);
+    }
+  }
+}
+
+async function gotoWithRetry(page, url, options = {}) {
+  const attempts = options.attempts ?? 3;
+  const waitUntil = options.waitUntil ?? "domcontentloaded";
+  const navigationTimeoutMs = options.navigationTimeoutMs ?? 15000;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await page.goto(url, {
+        waitUntil,
+        timeout: navigationTimeoutMs,
+      });
+      await page.waitForLoadState("networkidle", { timeout: 10000 });
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isRetriableNavigationError = /ERR_CONNECTION_REFUSED|ERR_FAILED|Navigation failed because browser has disconnected/i.test(
+        message,
+      );
+
+      if (!isRetriableNavigationError || attempt === attempts) {
+        throw error;
+      }
+
+      await page.waitForTimeout(600 * attempt);
+    }
+  }
 }
 
 async function waitForPlayerStatus(page, expectedStatus, timeoutMs = 12000) {
@@ -28,6 +80,7 @@ async function waitForPlayerStatus(page, expectedStatus, timeoutMs = 12000) {
 }
 
 async function ensurePlayback(page, expectedStatus, timeoutMs = 12000) {
+  const startedAt = Date.now();
   let status = await waitForPlayerStatus(page, expectedStatus, timeoutMs);
   let buttonText = (await page.locator(".play-button").textContent())?.trim() ?? "";
 
@@ -45,6 +98,31 @@ async function ensurePlayback(page, expectedStatus, timeoutMs = 12000) {
   return {
     status,
     buttonText,
+    startupMs: Date.now() - startedAt,
+  };
+}
+
+async function observeStablePlayback(page, expectedStatus, durationMs = 8000, intervalMs = 500) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < durationMs) {
+    const status = (await page.locator(".status-line").textContent())?.trim() ?? "";
+
+    if (status !== expectedStatus) {
+      return {
+        stable: false,
+        status,
+        observedMs: Date.now() - startedAt,
+      };
+    }
+
+    await page.waitForTimeout(intervalMs);
+  }
+
+  return {
+    stable: true,
+    status: expectedStatus,
+    observedMs: durationMs,
   };
 }
 
@@ -97,7 +175,7 @@ async function dispatchShortcut(page, code) {
 
 async function captureDesktop(browser) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 2200 } });
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await gotoWithRetry(page, baseUrl);
 
   const initialHeading = await page.locator("h1").textContent();
   const initialLang = await page.locator("html").getAttribute("lang");
@@ -111,7 +189,7 @@ async function captureDesktop(browser) {
     })),
   );
 
-  await page.screenshot({ path: path.join(outputDir, "desktop-home.png"), fullPage: true });
+  await takeScreenshotWithRetry(page, path.join(outputDir, "desktop-home.png"), { fullPage: true });
 
   await page.keyboard.press("Tab");
   const skipLinkFocus = await page.evaluate(() => ({
@@ -144,7 +222,7 @@ async function captureDesktop(browser) {
   await page.waitForTimeout(250);
   const englishHeading = await page.locator("h1").textContent();
   const englishLang = await page.locator("html").getAttribute("lang");
-  await page.screenshot({ path: path.join(outputDir, "desktop-english.png"), fullPage: true });
+  await takeScreenshotWithRetry(page, path.join(outputDir, "desktop-english.png"), { fullPage: true });
 
   await page.locator(".language-toggle").click();
   await page.waitForTimeout(250);
@@ -163,7 +241,11 @@ async function captureDesktop(browser) {
   const stationAfterReset = await readActiveStation(page);
 
   await page.locator(".play-button").click();
-  const { status: playerStatus, buttonText: playerButtonText } = await ensurePlayback(page, bg.playing);
+  const { status: playerStatus, buttonText: playerButtonText, startupMs: playerStartupMs } = await ensurePlayback(
+    page,
+    bg.playing,
+  );
+  const nazdravePlaybackWindow = await observeStablePlayback(page, bg.playing);
 
   await page.locator(".icon-button").click();
   const mutePressed = (await page.locator(".icon-button").getAttribute("aria-pressed")) === "true";
@@ -191,17 +273,23 @@ async function captureDesktop(browser) {
   await dispatchShortcut(page, "ArrowUp");
   const volumeAfterUp = await readVolumeState(page);
 
+  const goldStartedAt = Date.now();
   await page.locator(".station-button", { hasText: "Gold Radio" }).first().click();
-  await page.waitForTimeout(400);
+  const { status: goldStatus, buttonText: goldButtonText, startupMs: goldStartupMs } = await ensurePlayback(
+    page,
+    bg.playing,
+    24000,
+  );
+  const goldStartupMsFromClick = Date.now() - goldStartedAt;
   const goldTitle = await page.locator("#player-title").textContent();
   const goldSubtitle = await page.locator(".player-subtitle").textContent();
   const goldNoteVisible = await page.locator(".station-note").isVisible();
-  const { status: goldStatus, buttonText: goldButtonText } = await ensurePlayback(page, bg.playing, 24000);
+  const goldPlaybackWindow = await observeStablePlayback(page, bg.playing);
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await page.waitForTimeout(300);
   const stickyVisible = (await page.locator(".sticky-player").getAttribute("class"))?.includes("sticky-visible") ?? false;
-  await page.screenshot({ path: path.join(outputDir, "desktop-focus.png"), fullPage: false });
+  await takeScreenshotWithRetry(page, path.join(outputDir, "desktop-focus.png"), { fullPage: false });
 
   await page.close();
 
@@ -224,6 +312,8 @@ async function captureDesktop(browser) {
     stationAfterReset,
     playerStatus,
     playerButtonText,
+    playerStartupMs,
+    nazdravePlaybackWindow,
     mutePressed,
     muteReset,
     sliderAfterSet,
@@ -239,6 +329,8 @@ async function captureDesktop(browser) {
     goldNoteVisible,
     goldStatus,
     goldButtonText,
+    goldStartupMs: Math.max(goldStartupMs, goldStartupMsFromClick),
+    goldPlaybackWindow,
     stickyVisible,
   };
 }
@@ -247,8 +339,8 @@ async function captureMobile(browser) {
   const page = await browser.newPage({
     ...devices["iPhone 13"],
   });
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.screenshot({ path: path.join(outputDir, "mobile-home.png"), fullPage: true });
+  await gotoWithRetry(page, baseUrl);
+  await takeScreenshotWithRetry(page, path.join(outputDir, "mobile-home.png"), { fullPage: true });
 
   const metrics = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -272,8 +364,8 @@ async function captureTablet(browser) {
   const page = await browser.newPage({
     viewport: { width: 820, height: 1180 },
   });
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.screenshot({ path: path.join(outputDir, "tablet-home.png"), fullPage: true });
+  await gotoWithRetry(page, baseUrl);
+  await takeScreenshotWithRetry(page, path.join(outputDir, "tablet-home.png"), { fullPage: true });
 
   const headingVisible = await page.locator("h1").isVisible();
   const playerVisible = await page.locator("#player").isVisible();
@@ -349,6 +441,14 @@ async function main() {
       failures.push("Nazdrave player did not reach the playing state.");
     }
 
+    if ((desktop.playerStartupMs ?? Number.POSITIVE_INFINITY) > MAX_PLAYBACK_STARTUP_MS) {
+      failures.push(`Nazdrave player startup exceeded ${MAX_PLAYBACK_STARTUP_MS}ms.`);
+    }
+
+    if (!desktop.nazdravePlaybackWindow?.stable) {
+      failures.push("Nazdrave playback did not stay stable for the expected observation window.");
+    }
+
     if (!desktop.mutePressed || !desktop.muteReset) {
       failures.push("Mute button toggle did not update its pressed state correctly.");
     }
@@ -377,6 +477,14 @@ async function main() {
       failures.push("Gold Radio did not expose its backup note and playing state.");
     }
 
+    if ((desktop.goldStartupMs ?? Number.POSITIVE_INFINITY) > MAX_PLAYBACK_STARTUP_MS) {
+      failures.push(`Gold Radio startup exceeded ${MAX_PLAYBACK_STARTUP_MS}ms.`);
+    }
+
+    if (!desktop.goldPlaybackWindow?.stable) {
+      failures.push("Gold Radio playback did not stay stable for the expected observation window.");
+    }
+
     if (!desktop.stickyVisible) {
       failures.push("Sticky player did not appear after playback while scrolled.");
     }
@@ -396,7 +504,7 @@ async function main() {
     report.failures = failures;
     report.passed = failures.length === 0;
 
-    await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
+    await writeFileWithRetry(reportPath, JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report, null, 2));
   } finally {
     await browser.close();

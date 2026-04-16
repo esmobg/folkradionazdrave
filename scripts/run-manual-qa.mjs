@@ -32,18 +32,42 @@ async function ensureBuild() {
 
 let server;
 
+async function runManualQaAgainstPreview() {
+  server = startPreviewServer({ cwd: projectRoot, port });
+  await waitForUrl(baseUrl, { timeoutMs: 30000 });
+
+  try {
+    await runCommand(nodeCommand, [path.resolve(projectRoot, "scripts", "manual-qa.mjs")], {
+      cwd: projectRoot,
+      env: {
+        ...process.env,
+        QA_BASE_URL: baseUrl,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const isRetriablePreviewFailure = /ERR_CONNECTION_REFUSED|Timed out waiting for/i.test(message);
+
+    if (!isRetriablePreviewFailure) {
+      throw error;
+    }
+
+    await stopProcess(server);
+    server = startPreviewServer({ cwd: projectRoot, port });
+    await waitForUrl(baseUrl, { timeoutMs: 30000 });
+    await runCommand(nodeCommand, [path.resolve(projectRoot, "scripts", "manual-qa.mjs")], {
+      cwd: projectRoot,
+      env: {
+        ...process.env,
+        QA_BASE_URL: baseUrl,
+      },
+    });
+  }
+}
+
 try {
   await ensureBuild();
-  server = startPreviewServer({ cwd: projectRoot, port });
-
-  await waitForUrl(baseUrl, { timeoutMs: 30000 });
-  await runCommand(nodeCommand, [path.resolve(projectRoot, "scripts", "manual-qa.mjs")], {
-    cwd: projectRoot,
-    env: {
-      ...process.env,
-      QA_BASE_URL: baseUrl,
-    },
-  });
+  await runManualQaAgainstPreview();
 } finally {
   await stopProcess(server);
 }

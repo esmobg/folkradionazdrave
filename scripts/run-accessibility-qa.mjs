@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { content } from "../src/content.js";
-import { nodeCommand, projectRoot, runCommand } from "./review-utils.mjs";
+import { nodeCommand, projectRoot, runCommand, writeFileWithRetry } from "./review-utils.mjs";
 
 const reviewsDir = path.resolve(projectRoot, "reviews");
 const reportPath = path.resolve(reviewsDir, "accessibility-gate-results.json");
@@ -41,7 +41,7 @@ const result = {
   failedChecks,
 };
 
-await fs.writeFile(reportPath, JSON.stringify(result, null, 2));
+await writeFileWithRetry(reportPath, JSON.stringify(result, null, 2));
 console.log(JSON.stringify(result, null, 2));
 
 if (!result.passed) {

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",
-    "build": "vite build",
+    "build": "vite build && node scripts/inline-built-css.mjs",
     "preview": "node server.mjs --production",
     "check:i18n": "node scripts/check-i18n.mjs --report reviews/i18n-results.json",
     "qa:manual": "node scripts/run-manual-qa.mjs",
@@ -23,6 +23,10 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.4",
     "playwright": "^1.58.2",
-    "vite": "^7.1.10"
+    "vite": "^7.3.2"
+  },
+  "overrides": {
+    "path-to-regexp": "^8.4.2",
+    "picomatch": "^4.0.4"
   }
 }

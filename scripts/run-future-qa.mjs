@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { nodeCommand, projectRoot, runCommand } from "./review-utils.mjs";
+import { nodeCommand, projectRoot, runCommand, writeFileWithRetry } from "./review-utils.mjs";
 
 const reviewsDir = path.resolve(projectRoot, "reviews");
 const runsDir = path.resolve(reviewsDir, "future-qa-runs");
@@ -30,7 +30,7 @@ for (const fileName of artifacts) {
   const source = path.resolve(reviewsDir, fileName);
   const target = path.resolve(runDir, fileName);
   const content = await fs.readFile(source);
-  await fs.writeFile(target, content);
+  await writeFileWithRetry(target, content, { ensureParentDir: false });
 }
 
 const runSummary = {
@@ -39,5 +39,7 @@ const runSummary = {
   artifacts,
 };
 
-await fs.writeFile(path.resolve(runDir, "run-summary.json"), JSON.stringify(runSummary, null, 2));
+await writeFileWithRetry(path.resolve(runDir, "run-summary.json"), JSON.stringify(runSummary, null, 2), {
+  ensureParentDir: false,
+});
 console.log(JSON.stringify(runSummary, null, 2));

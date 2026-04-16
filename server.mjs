@@ -18,13 +18,28 @@ const isProduction = process.env.NODE_ENV === "production";
 const isDevelopment = !isProduction;
 const port = Number(process.env.PORT || 4173);
 
-const NAZDRAVE_STREAM_URL = "http://78.83.177.106:8000/;";
+const NAZDRAVE_STREAM_URLS = [
+  "http://78.83.177.106:8000/",
+  "http://78.83.177.106:8000/;",
+  "http://92.247.130.252:8066",
+  "http://92.247.130.252:8066/",
+];
+const NAZDRAVE_STREAM_SOURCE_MAP = Object.freeze({
+  "8000": NAZDRAVE_STREAM_URLS[0],
+  "8000-slash": NAZDRAVE_STREAM_URLS[1],
+  "8066": NAZDRAVE_STREAM_URLS[2],
+  "8066-slash": NAZDRAVE_STREAM_URLS[3],
+});
 const NAZDRAVE_NOW_PLAYING_URL = "https://radionazdrave.replit.app/api/now-playing";
 const GOLD_RADIO_STREAMS = ["http://92.247.130.252:8030", "http://78.83.177.106:8020"];
 const curlCommand = process.platform === "win32" ? "curl.exe" : "curl";
 const MAX_GOLD_STREAM_CONNECTIONS = getPositiveIntegerEnvValue("MAX_GOLD_STREAM_CONNECTIONS", 25);
+const LEGACY_STREAM_CONNECT_TIMEOUT_SECONDS = "1.25";
+const LEGACY_STREAM_FIRST_CHUNK_TIMEOUT_MS = 1400;
+const MIN_STABLE_STREAM_MS = 15000;
 
 let activeGoldStreamConnections = 0;
+const nazdraveStreamHealth = new Map();
 
 const app = express();
 app.disable("x-powered-by");
@@ -38,8 +53,8 @@ app.use(
             defaultSrc: ["'self'"],
             connectSrc: ["'self'"],
             imgSrc: ["'self'", "data:"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
             scriptSrc: ["'self'"],
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
@@ -102,6 +117,76 @@ function getPositiveIntegerEnvValue(name, fallback) {
   }
 
   return fallback;
+}
+
+function getDefaultStreamHealth() {
+  return {
+    successCount: 0,
+    failureCount: 0,
+    shortDropCount: 0,
+    lastConnectedAt: 0,
+    lastFailedAt: 0,
+    lastFirstByteMs: Number.POSITIVE_INFINITY,
+  };
+}
+
+function getStreamHealth(healthMap, url) {
+  return healthMap.get(url) ?? getDefaultStreamHealth();
+}
+
+function recordStreamSuccess(healthMap, url, firstByteMs) {
+  const current = getStreamHealth(healthMap, url);
+  healthMap.set(url, {
+    ...current,
+    successCount: current.successCount + 1,
+    lastConnectedAt: Date.now(),
+    lastFirstByteMs: Number.isFinite(firstByteMs) ? firstByteMs : current.lastFirstByteMs,
+  });
+}
+
+function recordStreamFailure(healthMap, url, options = {}) {
+  const current = getStreamHealth(healthMap, url);
+
+  healthMap.set(url, {
+    ...current,
+    failureCount: current.failureCount + 1,
+    shortDropCount: current.shortDropCount + (options.shortDrop ? 1 : 0),
+    lastFailedAt: Date.now(),
+  });
+}
+
+function rankStreamUrls(urls, healthMap) {
+  const positions = new Map(urls.map((url, index) => [url, index]));
+
+  return [...urls].sort((leftUrl, rightUrl) => {
+    const left = getStreamHealth(healthMap, leftUrl);
+    const right = getStreamHealth(healthMap, rightUrl);
+
+    if (left.shortDropCount !== right.shortDropCount) {
+      return left.shortDropCount - right.shortDropCount;
+    }
+
+    if (left.failureCount !== right.failureCount) {
+      return left.failureCount - right.failureCount;
+    }
+
+    const leftKnown = left.successCount > 0 ? 0 : 1;
+    const rightKnown = right.successCount > 0 ? 0 : 1;
+
+    if (leftKnown !== rightKnown) {
+      return leftKnown - rightKnown;
+    }
+
+    if (left.lastFirstByteMs !== right.lastFirstByteMs) {
+      return left.lastFirstByteMs - right.lastFirstByteMs;
+    }
+
+    if (left.lastConnectedAt !== right.lastConnectedAt) {
+      return right.lastConnectedAt - left.lastConnectedAt;
+    }
+
+    return positions.get(leftUrl) - positions.get(rightUrl);
+  });
 }
 
 async function openStream(url) {
@@ -211,27 +296,37 @@ function reserveGoldStreamConnection(res) {
   };
 }
 
-async function proxyLegacyIcyStream(urls, res) {
-  for (const url of urls) {
+async function proxyLegacyIcyStream(urls, res, options = {}) {
+  const healthMap = options.healthMap;
+  const orderedUrls = healthMap ? rankStreamUrls(urls, healthMap) : urls;
+
+  for (const url of orderedUrls) {
     const connected = await new Promise((resolve) => {
+      const startedAt = Date.now();
       const child = spawn(curlCommand, [
         "--http0.9",
         "--silent",
         "--show-error",
+        "--no-buffer",
         "--connect-timeout",
-        "8",
+        LEGACY_STREAM_CONNECT_TIMEOUT_SECONDS,
         url,
       ]);
 
       let settled = false;
       let streaming = false;
+      let clientClosed = false;
+      let firstByteMs = Number.POSITIVE_INFINITY;
       const connectTimer = setTimeout(() => {
         if (!settled) {
           settled = true;
+          if (healthMap) {
+            recordStreamFailure(healthMap, url);
+          }
           child.kill();
           resolve(false);
         }
-      }, 8000);
+      }, LEGACY_STREAM_FIRST_CHUNK_TIMEOUT_MS);
 
       function cleanup() {
         clearTimeout(connectTimer);
@@ -240,15 +335,24 @@ async function proxyLegacyIcyStream(urls, res) {
         child.stderr.removeAllListeners("data");
         child.removeAllListeners("error");
         child.removeAllListeners("exit");
+        res.removeListener("close", handleResponseClose);
       }
 
       function fail() {
         if (!settled) {
           settled = true;
+          if (healthMap) {
+            recordStreamFailure(healthMap, url);
+          }
           cleanup();
           child.kill();
           resolve(false);
         }
+      }
+
+      function handleResponseClose() {
+        clientClosed = true;
+        child.kill();
       }
 
       child.stdout.once("data", (chunk) => {
@@ -258,7 +362,11 @@ async function proxyLegacyIcyStream(urls, res) {
 
         settled = true;
         streaming = true;
+        firstByteMs = Date.now() - startedAt;
         clearTimeout(connectTimer);
+        if (healthMap) {
+          recordStreamSuccess(healthMap, url, firstByteMs);
+        }
         setLegacyStreamHeaders(res);
         res.write(chunk);
         child.stdout.pipe(res);
@@ -278,9 +386,16 @@ async function proxyLegacyIcyStream(urls, res) {
         if (!streaming) {
           if (!settled) {
             settled = true;
+            if (healthMap) {
+              recordStreamFailure(healthMap, url);
+            }
             resolve(false);
           }
           return;
+        }
+
+        if (!clientClosed && healthMap && Date.now() - startedAt < MIN_STABLE_STREAM_MS) {
+          recordStreamFailure(healthMap, url, { shortDrop: true });
         }
 
         if (!res.writableEnded) {
@@ -288,9 +403,7 @@ async function proxyLegacyIcyStream(urls, res) {
         }
       });
 
-      res.on("close", () => {
-        child.kill();
-      });
+      res.on("close", handleResponseClose);
     });
 
     if (connected) {
@@ -305,8 +418,19 @@ app.get("/api/now-playing/nazdrave", async (_req, res) => {
   await proxyJson(NAZDRAVE_NOW_PLAYING_URL, res);
 });
 
-app.get("/api/stream/nazdrave", async (_req, res) => {
-  await proxyLegacyIcyStream([NAZDRAVE_STREAM_URL], res);
+app.get("/api/stream/nazdrave", async (req, res) => {
+  const requestedSource = typeof req.query.source === "string" ? NAZDRAVE_STREAM_SOURCE_MAP[req.query.source] : null;
+
+  if (requestedSource) {
+    await proxyLegacyIcyStream([requestedSource], res, {
+      healthMap: nazdraveStreamHealth,
+    });
+    return;
+  }
+
+  await proxyLegacyIcyStream(NAZDRAVE_STREAM_URLS, res, {
+    healthMap: nazdraveStreamHealth,
+  });
 });
 
 app.get("/api/stream/gold", async (_req, res) => {

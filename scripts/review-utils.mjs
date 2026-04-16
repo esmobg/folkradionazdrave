@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 export const projectRoot = process.cwd();
 export const isWindows = process.platform === "win32";
@@ -155,4 +157,30 @@ export async function stopProcess(child) {
       finish();
     }
   });
+}
+
+export async function writeFileWithRetry(filePath, content, options = {}) {
+  const attempts = options.attempts ?? 5;
+  const baseDelayMs = options.baseDelayMs ?? 120;
+  const ensureParentDir = options.ensureParentDir ?? true;
+
+  if (ensureParentDir) {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+  }
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await fs.writeFile(filePath, content);
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isRetriableFsError = /UNKNOWN: unknown error, open|EBUSY|EPERM|EACCES/i.test(message);
+
+      if (!isRetriableFsError || attempt === attempts) {
+        throw error;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, baseDelayMs * attempt));
+    }
+  }
 }

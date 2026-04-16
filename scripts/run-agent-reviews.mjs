@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { nodeCommand, npmCommand, projectRoot, runCommand } from "./review-utils.mjs";
+import { nodeCommand, npmCommand, projectRoot, runCommand, writeFileWithRetry } from "./review-utils.mjs";
 
 const reviewsDir = path.resolve(projectRoot, "reviews");
 const screenshotsDir = path.resolve(reviewsDir, "screenshots");
@@ -36,7 +36,7 @@ const auditResult = await runCommand(npmCommand, ["audit", "--omit=dev", "--json
 });
 
 const auditJson = JSON.parse(auditResult.stdout || auditResult.stderr || "{}");
-await fs.writeFile(auditReportPath, JSON.stringify(auditJson, null, 2));
+await writeFileWithRetry(auditReportPath, JSON.stringify(auditJson, null, 2));
 
 const manualQa = await readJson(path.resolve(reviewsDir, "manual-qa-results.json"));
 const accessibilityQa = await readJson(path.resolve(reviewsDir, "accessibility-gate-results.json"));
@@ -47,7 +47,7 @@ const auditPassed = vulnerabilities === 0;
 const manualPassed = Boolean(manualQa.passed);
 const accessibilityPassed = Boolean(accessibilityQa.passed);
 const i18nPassed = Boolean(i18n.passed);
-const productionReady = auditPassed && accessibilityPassed && i18nPassed;
+const productionReady = auditPassed && manualPassed && accessibilityPassed && i18nPassed;
 
 const summary = {
   checkedAt: new Date().toISOString(),
@@ -59,7 +59,7 @@ const summary = {
   productionReady,
 };
 
-await fs.writeFile(summaryPath, JSON.stringify(summary, null, 2));
+await writeFileWithRetry(summaryPath, JSON.stringify(summary, null, 2));
 
 const accessibilityReview = createMarkdown("Accessibility Review", [
   `Status: ${accessibilityPassed ? "pass with low residual risk" : "fail"}`,
@@ -222,14 +222,14 @@ const productionReadiness = createMarkdown("Production Readiness", [
 ]);
 
 await Promise.all([
-  fs.writeFile(path.resolve(reviewsDir, "accessibility-review.md"), accessibilityReview),
-  fs.writeFile(path.resolve(reviewsDir, "copywriting-review.md"), copywritingReview),
-  fs.writeFile(path.resolve(reviewsDir, "polyglot-review.md"), polyglotReview),
-  fs.writeFile(path.resolve(reviewsDir, "manual-qa-review.md"), manualQaReview),
-  fs.writeFile(path.resolve(reviewsDir, "qa-review.md"), qaReview),
-  fs.writeFile(path.resolve(reviewsDir, "full-stack-review.md"), fullStackReview),
-  fs.writeFile(path.resolve(reviewsDir, "ux-ui-review.md"), uxUiReview),
-  fs.writeFile(path.resolve(reviewsDir, "production-readiness.md"), productionReadiness),
+  writeFileWithRetry(path.resolve(reviewsDir, "accessibility-review.md"), accessibilityReview),
+  writeFileWithRetry(path.resolve(reviewsDir, "copywriting-review.md"), copywritingReview),
+  writeFileWithRetry(path.resolve(reviewsDir, "polyglot-review.md"), polyglotReview),
+  writeFileWithRetry(path.resolve(reviewsDir, "manual-qa-review.md"), manualQaReview),
+  writeFileWithRetry(path.resolve(reviewsDir, "qa-review.md"), qaReview),
+  writeFileWithRetry(path.resolve(reviewsDir, "full-stack-review.md"), fullStackReview),
+  writeFileWithRetry(path.resolve(reviewsDir, "ux-ui-review.md"), uxUiReview),
+  writeFileWithRetry(path.resolve(reviewsDir, "production-readiness.md"), productionReadiness),
 ]);
 
 console.log(

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { content, localeCodes, STATIONS } from "../src/content.js";
+import { writeFileWithRetry } from "./review-utils.mjs";
 
 const reportArgIndex = process.argv.indexOf("--report");
 const reportPath =
@@ -150,7 +151,9 @@ const result = {
 
 if (reportPath) {
   await fs.mkdir(path.dirname(reportPath), { recursive: true });
-  await fs.writeFile(reportPath, JSON.stringify(result, null, 2));
+  await writeFileWithRetry(reportPath, JSON.stringify(result, null, 2), {
+    ensureParentDir: false,
+  });
 }
 
 if (result.passed) {

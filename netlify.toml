@@ -29,6 +29,27 @@ force = true
 
 [[redirects]]
 from = "/*"
+to = "http://92.247.130.252:8066/"
+status = 301
+force = true
+conditions = { Host = ["str1.folkradionazdrave.com"] }
+
+[[redirects]]
+from = "/*"
+to = "http://78.83.177.106:8000/"
+status = 301
+force = true
+conditions = { Host = ["str2.folkradionazdrave.com"] }
+
+[[redirects]]
+from = "/*"
+to = "http://92.247.130.252:8020/"
+status = 301
+force = true
+conditions = { Host = ["str3.folkradionazdrave.com"] }
+
+[[redirects]]
+from = "/*"
 to = "/index.html"
 status = 200
 
@@ -36,7 +57,7 @@ status = 200
 for = "/*"
 
 [headers.values]
-Content-Security-Policy = "default-src 'self'; connect-src 'self'; media-src 'self' blob:; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+Content-Security-Policy = "default-src 'self'; connect-src 'self'; media-src 'self' blob:; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 Permissions-Policy = "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
 Referrer-Policy = "no-referrer"
 X-Content-Type-Options = "nosniff"

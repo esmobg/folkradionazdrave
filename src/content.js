@@ -1,12 +1,63 @@
-const goldStreamUrl = import.meta.env.VITE_GOLD_STREAM_URL || "/api/stream/gold";
-const nazdraveStreamUrl = import.meta.env.VITE_NAZDRAVE_STREAM_URL || "/api/stream/nazdrave";
-const showGoldStation = import.meta.env.VITE_ENABLE_GOLD_STATION !== "false";
+// This shared content module is loaded by both the Vite app and Node-based QA scripts.
+const runtimeEnv = import.meta.env ?? globalThis.process?.env ?? {};
+
+function getBrowserSafeStreamUrl(configValue, fallbackPath) {
+  const nextValue = configValue || fallbackPath;
+
+  if (typeof window === "undefined") {
+    return nextValue;
+  }
+
+  const normalizedValue = String(nextValue).trim();
+  const looksLikeInsecureExternalStream =
+    /^http:\/\//i.test(normalizedValue) || /^[a-z0-9.-]+(?::\d+)(?:\/.*)?$/i.test(normalizedValue);
+
+  if (window.location.protocol === "https:" && looksLikeInsecureExternalStream) {
+    return new URL(fallbackPath, window.location.origin).toString();
+  }
+
+  return normalizedValue;
+}
+
+function appendQueryParam(url, key, value) {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+}
+
+function isProxyBackedStreamUrl(url, fallbackPath) {
+  const normalizedUrl = String(url).trim();
+
+  return (
+    normalizedUrl === fallbackPath ||
+    normalizedUrl.startsWith(`${fallbackPath}?`) ||
+    normalizedUrl.endsWith(fallbackPath) ||
+    normalizedUrl.includes(`${fallbackPath}?`)
+  );
+}
+
+function createRetryableStreamUrls(configValue, fallbackPath, variantCount = 4) {
+  const streamUrl = getBrowserSafeStreamUrl(configValue, fallbackPath);
+
+  if (!isProxyBackedStreamUrl(streamUrl, fallbackPath)) {
+    return [streamUrl];
+  }
+
+  return Array.from(
+    new Set(
+      Array.from({ length: variantCount }, (_value, index) => appendQueryParam(streamUrl, "client", index)),
+    ),
+  );
+}
+
+const goldStreamUrls = createRetryableStreamUrls(runtimeEnv.VITE_GOLD_STREAM_URL, "/api/stream/gold");
+const nazdraveStreamUrls = createRetryableStreamUrls(runtimeEnv.VITE_NAZDRAVE_STREAM_URL, "/api/stream/nazdrave");
+const showGoldStation = runtimeEnv.VITE_ENABLE_GOLD_STATION !== "false";
 
 const stationDefinitions = {
   nazdrave: {
     id: "nazdrave",
-    urls: [nazdraveStreamUrl],
-    nowPlayingUrl: "/api/now-playing/nazdrave",
+    urls: nazdraveStreamUrls,
+    nowPlayingUrl: null,
     names: {
       bg: "Фолк Радио Наздраве",
       en: "Folk Radio Nazdrave",
@@ -18,7 +69,7 @@ const stationDefinitions = {
   },
   gold: {
     id: "gold",
-    urls: [goldStreamUrl],
+    urls: goldStreamUrls,
     nowPlayingUrl: null,
     names: {
       bg: "Gold Radio",
@@ -81,6 +132,7 @@ export const content = {
     mute: "Без звук",
     unmute: "Пусни звук",
     volume: "Сила на звука",
+    downloadForExternalPlayer: "Изтегли за външен плеър",
     backupStreamReady: "Gold Radio има резервен поток, ако основният източник прекъсне.",
     loading: "Плеърът зарежда.",
     playing: "Плеърът свири.",
@@ -206,6 +258,7 @@ export const content = {
     mute: "Mute",
     unmute: "Unmute",
     volume: "Volume",
+    downloadForExternalPlayer: "Download for external player",
     backupStreamReady: "Gold Radio includes a backup stream if the primary source drops.",
     loading: "Player is loading.",
     playing: "Player is playing.",

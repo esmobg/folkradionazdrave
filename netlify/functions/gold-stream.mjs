@@ -5,9 +5,8 @@ const GOLD_RADIO_STREAMS = [
   "http://92.247.130.252:8030",
   "http://78.83.177.106:8020",
 ];
-const CONNECT_TIMEOUT_SECONDS = "8";
-const MAX_STREAM_WINDOW_MS = 3200;
-const FIRST_CHUNK_TIMEOUT_MS = 8500;
+const CONNECT_TIMEOUT_SECONDS = "1.25";
+const FIRST_CHUNK_TIMEOUT_MS = 1400;
 const MAX_HEADER_BYTES = 16384;
 
 function openGoldStream(url, requestSignal) {
@@ -16,6 +15,7 @@ function openGoldStream(url, requestSignal) {
       "--http0.9",
       "--silent",
       "--show-error",
+      "--no-buffer",
       "--connect-timeout",
       CONNECT_TIMEOUT_SECONDS,
       url,
@@ -30,13 +30,8 @@ function openGoldStream(url, requestSignal) {
       }
     }, FIRST_CHUNK_TIMEOUT_MS);
 
-    const hardStopTimeout = setTimeout(() => {
-      child.kill("SIGTERM");
-    }, MAX_STREAM_WINDOW_MS);
-
     function cleanup() {
       clearTimeout(firstChunkTimeout);
-      clearTimeout(hardStopTimeout);
       requestSignal?.removeEventListener("abort", handleAbort);
     }
 
@@ -147,7 +142,6 @@ export default async (request) => {
         headers: {
           "cache-control": "no-store",
           "content-type": "audio/mpeg",
-          "x-gold-stream-window": String(MAX_STREAM_WINDOW_MS),
         },
       });
     } catch (error) {

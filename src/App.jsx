@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { STATIONS, content } from "./content";
 
 const DEFAULT_STATION_ID = STATIONS.nazdrave ? "nazdrave" : Object.keys(STATIONS)[0];
+const PLAYBACK_START_TIMEOUT_MS = 6500;
+const BUFFERING_RECOVERY_TIMEOUT_MS = 7000;
+const BUFFERING_INDICATOR_DELAY_MS = 450;
+const SAME_STREAM_RETRY_DELAY_MS = 500;
+const NEXT_STREAM_RETRY_DELAY_MS = 150;
+const STREAM_WARMUP_TIMEOUT_MS = 1800;
+const PROXY_STREAM_REFRESH_MS = 52000;
+const LOCAL_HOSTNAMES = new Set(["127.0.0.1", "localhost"]);
 
 function getValidStationId(stationId) {
   return STATIONS[stationId] ? stationId : DEFAULT_STATION_ID;
@@ -127,6 +135,14 @@ function App() {
   const selectedStationRef = useRef(selectedStationId);
   const streamIndexRef = useRef(0);
   const retryTimerRef = useRef(null);
+  const playbackStartTimerRef = useRef(null);
+  const bufferingIndicatorTimerRef = useRef(null);
+  const streamRefreshTimerRef = useRef(null);
+  const playbackAttemptRef = useRef(0);
+  const silentRefreshRef = useRef(false);
+  const streamWarmupControllerRef = useRef(null);
+  const warmingStreamUrlRef = useRef("");
+  const warmedStreamUrlsRef = useRef(new Set());
   const playerRef = useRef(null);
   const themeButtonRefs = useRef({});
   const stationButtonRefs = useRef({});
@@ -142,6 +158,26 @@ function App() {
   const selectedStation = STATIONS[selectedStationId] ?? STATIONS[DEFAULT_STATION_ID];
   const stationName = selectedStation.names[language];
   const stationSubtitle = selectedStation.subtitles[language];
+
+  function selectStation(nextStationId) {
+    if (!STATIONS[nextStationId] || nextStationId === selectedStationRef.current) {
+      return;
+    }
+
+    clearRetryTimer();
+    clearPlaybackStartTimer();
+    clearBufferingIndicatorTimer();
+    clearStreamRefreshTimer();
+    setTrack(null);
+    setError("");
+
+    if (hasPlaybackAttemptedRef.current && (isPlayingRef.current || isLoadingRef.current)) {
+      setIsPlaying(false);
+      setIsLoading(true);
+    }
+
+    setSelectedStationId(nextStationId);
+  }
 
   useEffect(() => {
     localStorage.setItem("radio-language", language);
@@ -177,9 +213,20 @@ function App() {
     audioRef.current = audio;
 
     return () => {
+      if (playbackStartTimerRef.current) {
+        window.clearTimeout(playbackStartTimerRef.current);
+      }
+      if (bufferingIndicatorTimerRef.current) {
+        window.clearTimeout(bufferingIndicatorTimerRef.current);
+      }
       if (retryTimerRef.current) {
         window.clearTimeout(retryTimerRef.current);
       }
+      if (streamRefreshTimerRef.current) {
+        window.clearTimeout(streamRefreshTimerRef.current);
+      }
+      streamWarmupControllerRef.current?.abort();
+      warmingStreamUrlRef.current = "";
       audio.pause();
       audio.src = "";
     };
@@ -193,31 +240,69 @@ function App() {
     }
 
     const onPlaying = () => {
+      silentRefreshRef.current = false;
+      clearBufferingIndicatorTimer();
       clearRetryTimer();
+      clearPlaybackStartTimer();
       setIsLoading(false);
       setIsPlaying(true);
       setError("");
+      scheduleStreamRefresh(selectedStationRef.current, streamIndexRef.current);
     };
 
-    const onWaiting = () => setIsLoading(true);
+    const onWaiting = () => {
+      if (!playbackStartTimerRef.current && !bufferingIndicatorTimerRef.current) {
+        bufferingIndicatorTimerRef.current = window.setTimeout(() => {
+          setIsLoading(true);
+        }, BUFFERING_INDICATOR_DELAY_MS);
+      }
+
+      if (!hasPlaybackAttemptedRef.current || playbackStartTimerRef.current) {
+        return;
+      }
+
+      playbackStartTimerRef.current = window.setTimeout(() => {
+        audio.pause();
+        clearRetryTimer();
+        scheduleRetry(selectedStationRef.current, streamIndexRef.current);
+      }, BUFFERING_RECOVERY_TIMEOUT_MS);
+    };
     const onPause = () => {
+      clearStreamRefreshTimer();
+
+      if (silentRefreshRef.current) {
+        return;
+      }
+
+      clearBufferingIndicatorTimer();
+      clearPlaybackStartTimer();
       setIsLoading(false);
       setIsPlaying(false);
     };
     const onError = () => {
+      silentRefreshRef.current = false;
+
       if (!hasPlaybackAttemptedRef.current) {
         return;
       }
 
+      clearBufferingIndicatorTimer();
       clearRetryTimer();
+      clearPlaybackStartTimer();
+      clearStreamRefreshTimer();
       scheduleRetry(selectedStationRef.current, streamIndexRef.current);
     };
     const onEnded = () => {
+      silentRefreshRef.current = false;
+
       if (!hasPlaybackAttemptedRef.current) {
         return;
       }
 
+      clearBufferingIndicatorTimer();
       clearRetryTimer();
+      clearPlaybackStartTimer();
+      clearStreamRefreshTimer();
       scheduleRetry(selectedStationRef.current, streamIndexRef.current);
     };
     audio.addEventListener("playing", onPlaying);
@@ -319,21 +404,81 @@ function App() {
       return;
     }
 
-    const shouldResume = isPlaying || isLoading;
+    const shouldResume = hasPlaybackAttemptedRef.current && (isPlaying || isLoading);
 
     clearRetryTimer();
+    clearPlaybackStartTimer();
+    clearBufferingIndicatorTimer();
+    clearStreamRefreshTimer();
     setTrack(null);
     setError("");
-    setIsLoading(false);
+    silentRefreshRef.current = false;
     setIsPlaying(false);
     audio.pause();
-    audio.src = "";
+    audio.removeAttribute("src");
+    audio.load();
     streamIndexRef.current = 0;
 
     if (shouldResume) {
+      setIsLoading(true);
       void attemptPlayback(selectedStationId, 0);
+      return;
     }
+
+    setIsLoading(false);
   }, [selectedStationId]);
+
+  function warmSelectedStream() {
+    const streamUrl = selectedStation.urls[0];
+
+    if (!streamUrl || navigator.connection?.saveData || warmedStreamUrlsRef.current.has(streamUrl)) {
+      return;
+    }
+
+    if (streamWarmupControllerRef.current && warmingStreamUrlRef.current === streamUrl) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      controller.abort();
+    }, STREAM_WARMUP_TIMEOUT_MS);
+
+    streamWarmupControllerRef.current?.abort();
+    streamWarmupControllerRef.current = controller;
+    warmingStreamUrlRef.current = streamUrl;
+
+    void fetch(streamUrl, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok || !response.body) {
+          return;
+        }
+
+        const reader = response.body.getReader();
+        await reader.read();
+        warmedStreamUrlsRef.current.add(streamUrl);
+        await reader.cancel();
+      })
+      .catch((error) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          warmedStreamUrlsRef.current.delete(streamUrl);
+        }
+      })
+      .finally(() => {
+        window.clearTimeout(timeoutId);
+
+        if (streamWarmupControllerRef.current === controller) {
+          streamWarmupControllerRef.current = null;
+        }
+
+        if (warmingStreamUrlRef.current === streamUrl) {
+          warmingStreamUrlRef.current = "";
+        }
+      });
+  }
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -395,6 +540,66 @@ function App() {
     }
   }
 
+  function clearPlaybackStartTimer() {
+    if (playbackStartTimerRef.current) {
+      window.clearTimeout(playbackStartTimerRef.current);
+      playbackStartTimerRef.current = null;
+    }
+  }
+
+  function clearBufferingIndicatorTimer() {
+    if (bufferingIndicatorTimerRef.current) {
+      window.clearTimeout(bufferingIndicatorTimerRef.current);
+      bufferingIndicatorTimerRef.current = null;
+    }
+  }
+
+  function clearStreamRefreshTimer() {
+    if (streamRefreshTimerRef.current) {
+      window.clearTimeout(streamRefreshTimerRef.current);
+      streamRefreshTimerRef.current = null;
+    }
+  }
+
+  function getRotatedStreamIndex(stationId, streamIndex) {
+    const station = STATIONS[stationId];
+
+    if (!station || station.urls.length === 0) {
+      return streamIndex;
+    }
+
+    return (streamIndex + 1) % station.urls.length;
+  }
+
+  function shouldRefreshProxyStream(stationId, streamIndex) {
+    const station = STATIONS[stationId];
+    const streamUrl = station?.urls[streamIndex];
+
+    if (!streamUrl || typeof window === "undefined" || LOCAL_HOSTNAMES.has(window.location.hostname)) {
+      return false;
+    }
+
+  return stationId === "gold" && streamUrl.includes("/api/stream/");
+  }
+
+  function scheduleStreamRefresh(stationId, streamIndex) {
+    clearStreamRefreshTimer();
+
+    if (!shouldRefreshProxyStream(stationId, streamIndex)) {
+      return;
+    }
+
+    streamRefreshTimerRef.current = window.setTimeout(() => {
+      if (!isPlayingRef.current || selectedStationRef.current !== stationId) {
+        return;
+      }
+
+      void attemptPlayback(stationId, getRotatedStreamIndex(stationId, streamIndex), {
+        silentRefresh: true,
+      });
+    }, PROXY_STREAM_REFRESH_MS);
+  }
+
   function getRetryStreamIndex(stationId, streamIndex) {
     const station = STATIONS[stationId];
 
@@ -407,14 +612,14 @@ function App() {
 
   function scheduleRetry(stationId, streamIndex) {
     const nextStreamIndex = getRetryStreamIndex(stationId, streamIndex);
-    const retryDelay = nextStreamIndex === streamIndex ? 5000 : 3000;
+    const retryDelay = nextStreamIndex === streamIndex ? SAME_STREAM_RETRY_DELAY_MS : NEXT_STREAM_RETRY_DELAY_MS;
 
     retryTimerRef.current = window.setTimeout(() => {
       void attemptPlayback(stationId, nextStreamIndex);
     }, retryDelay);
   }
 
-  async function attemptPlayback(stationId, streamIndex = 0) {
+  async function attemptPlayback(stationId, streamIndex = 0, options = {}) {
     const audio = audioRef.current;
     const station = STATIONS[stationId];
 
@@ -435,20 +640,44 @@ function App() {
     }
 
     selectedStationRef.current = stationId;
+    playbackAttemptRef.current += 1;
+    const playbackAttemptId = playbackAttemptRef.current;
     streamIndexRef.current = streamIndex;
+    silentRefreshRef.current = options.silentRefresh === true && isPlayingRef.current;
+    streamWarmupControllerRef.current?.abort();
+    warmingStreamUrlRef.current = "";
     clearRetryTimer();
+    clearPlaybackStartTimer();
+    clearBufferingIndicatorTimer();
+    clearStreamRefreshTimer();
     setError("");
-    setIsLoading(true);
+
+    if (!silentRefreshRef.current) {
+      setIsLoading(true);
+    }
 
     try {
       audio.pause();
-      const cacheBuster = streamUrl.includes("?") ? `&_t=${Date.now()}` : `?_t=${Date.now()}`;
-      audio.src = streamUrl + cacheBuster;
+      audio.removeAttribute("src");
       audio.load();
-      scheduleRetry(stationId, streamIndex);
+      audio.src = streamUrl;
+      audio.load();
+      playbackStartTimerRef.current = window.setTimeout(() => {
+        if (playbackAttemptRef.current !== playbackAttemptId || isPlayingRef.current) {
+          return;
+        }
+
+        silentRefreshRef.current = false;
+        audio.pause();
+        scheduleRetry(stationId, streamIndex);
+      }, PLAYBACK_START_TIMEOUT_MS);
       await audio.play();
     } catch {
+      silentRefreshRef.current = false;
       clearRetryTimer();
+      clearPlaybackStartTimer();
+      setIsPlaying(false);
+      setIsLoading(true);
       scheduleRetry(stationId, streamIndex);
     }
   }
@@ -459,7 +688,11 @@ function App() {
     }
 
     if (isPlayingRef.current || isLoadingRef.current) {
+      silentRefreshRef.current = false;
       clearRetryTimer();
+      clearPlaybackStartTimer();
+      clearBufferingIndicatorTimer();
+      clearStreamRefreshTimer();
       audioRef.current.pause();
       setIsPlaying(false);
       setIsLoading(false);
@@ -1130,13 +1363,13 @@ function App() {
                     ref={setOptionRef(stationButtonRefs, station.id)}
                     type="button"
                     className={isActive ? "station-button active" : "station-button"}
-                    onClick={() => setSelectedStationId(station.id)}
+                    onClick={() => selectStation(station.id)}
                     onKeyDown={(event) =>
                       handleRadioKeyDown(
                         event,
                         stationIds,
                         station.id,
-                        setSelectedStationId,
+                        selectStation,
                         stationButtonRefs,
                       )}
                     role="radio"
@@ -1183,6 +1416,9 @@ function App() {
               <button
                 type="button"
                 className="play-button"
+                onPointerEnter={warmSelectedStream}
+                onFocus={warmSelectedStream}
+                onTouchStart={warmSelectedStream}
                 onClick={() => void togglePlayback()}
                 aria-pressed={isPlaying}
                 aria-label={isPlaying ? t.pause : t.play}
@@ -1203,6 +1439,14 @@ function App() {
               >
                 {isMuted ? t.unmute : t.mute}
               </button>
+              <a
+                className="button button-secondary external-download-button"
+                href="/folk-radio-playlist.m3u"
+                download
+                aria-label={t.downloadForExternalPlayer}
+              >
+                {t.downloadForExternalPlayer}
+              </a>
             </div>
 
             <label className="slider-wrap">
@@ -1380,6 +1624,9 @@ function App() {
           <button
             type="button"
             className="sticky-play-button"
+            onPointerEnter={warmSelectedStream}
+            onFocus={warmSelectedStream}
+            onTouchStart={warmSelectedStream}
             onClick={() => void togglePlayback()}
             aria-label={isPlaying ? t.pause : t.play}
             tabIndex={showStickyPlayer ? 0 : -1}
