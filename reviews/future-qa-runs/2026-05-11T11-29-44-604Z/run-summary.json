@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-05-11T11:31:27.746Z",
+  "runDir": "C:\\Users\\esmo\\My project\\folk radio  nazdr4ave web app\\reviews\\future-qa-runs\\2026-05-11T11-29-44-604Z",
+  "artifacts": [
+    "agent-summary.json",
+    "manual-qa-results.json",
+    "accessibility-gate-results.json",
+    "production-readiness.md",
+    "qa-review.md",
+    "accessibility-review.md"
+  ]
+}

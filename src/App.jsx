@@ -7,6 +7,7 @@ const BUFFERING_RECOVERY_TIMEOUT_MS = 7000;
 const BUFFERING_INDICATOR_DELAY_MS = 450;
 const SAME_STREAM_RETRY_DELAY_MS = 500;
 const NEXT_STREAM_RETRY_DELAY_MS = 150;
+const MAX_STREAM_RETRY_ATTEMPTS = 8;
 const STREAM_WARMUP_TIMEOUT_MS = 1800;
 const PROXY_STREAM_REFRESH_MS = 52000;
 const LOCAL_HOSTNAMES = new Set(["127.0.0.1", "localhost"]);
@@ -54,6 +55,30 @@ function Waveform({ isPlaying }) {
       <path className="wave-path wave-path-1" d={pathOne} />
       <path className="wave-path wave-path-2" d={pathTwo} />
       <path className="wave-path wave-path-3" d={pathThree} />
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M14 8h3V4h-3c-3.1 0-5 1.9-5 5v3H6v4h3v4h4v-4h3l1-4h-4V9c0-.7.3-1 1-1Z" />
+    </svg>
+  );
+}
+
+function YoutubeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M22 9.4c0-2-1.6-3.6-3.5-3.7C16.4 5.5 13.9 5.4 12 5.4c-1.9 0-4.4.1-6.5.3C3.6 5.8 2 7.4 2 9.4c-.1 1.2-.1 2.3-.1 2.6s0 1.4.1 2.6c0 2 1.6 3.6 3.5 3.7 2.1.2 4.6.3 6.5.3 1.9 0 4.4-.1 6.5-.3 1.9-.1 3.5-1.7 3.5-3.7.1-1.2.1-2.3.1-2.6s0-1.4-.1-2.6ZM10 15.5v-7l6 3.5-6 3.5Z" />
+    </svg>
+  );
+}
+
+function TiktokIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M14 3h3.1c.2 1.5 1.1 2.8 2.5 3.5.8.4 1.6.6 2.4.6v3.1c-1.6 0-3.2-.4-4.5-1.1v5.5c0 3-2.5 5.4-5.5 5.4s-5.5-2.4-5.5-5.4 2.5-5.4 5.5-5.4c.3 0 .7 0 1 .1v3.2a2.5 2.5 0 1 0 1 2.1V3Z" />
     </svg>
   );
 }
@@ -127,6 +152,12 @@ function App() {
   const [track, setTrack] = useState(null);
   const [error, setError] = useState("");
   const [showStickyPlayer, setShowStickyPlayer] = useState(false);
+  const [accessibilityOpen, setAccessibilityOpen] = useState(false);
+  const [fontScale, setFontScale] = useState(() => Number(localStorage.getItem("radio-font-scale") || "1"));
+  const [highContrast, setHighContrast] = useState(() => localStorage.getItem("radio-high-contrast") === "true");
+  const [reducedMotionMode, setReducedMotionMode] = useState(
+    () => localStorage.getItem("radio-reduced-motion") === "true",
+  );
 
   const audioRef = useRef(null);
   const hasPlaybackAttemptedRef = useRef(false);
@@ -139,6 +170,7 @@ function App() {
   const bufferingIndicatorTimerRef = useRef(null);
   const streamRefreshTimerRef = useRef(null);
   const playbackAttemptRef = useRef(0);
+  const retryAttemptCountRef = useRef(0);
   const silentRefreshRef = useRef(false);
   const streamWarmupControllerRef = useRef(null);
   const warmingStreamUrlRef = useRef("");
@@ -156,6 +188,7 @@ function App() {
   const themeIds = themeOptions.map((option) => option.id);
   const stationIds = stationsList.map((station) => station.id);
   const selectedStation = STATIONS[selectedStationId] ?? STATIONS[DEFAULT_STATION_ID];
+  const stationPlaylistUrl = selectedStationId === "gold" ? "/gold.m3u" : "/nazdrave.m3u";
   const stationName = selectedStation.names[language];
   const stationSubtitle = selectedStation.subtitles[language];
 
@@ -170,6 +203,7 @@ function App() {
     clearStreamRefreshTimer();
     setTrack(null);
     setError("");
+    retryAttemptCountRef.current = 0;
 
     if (hasPlaybackAttemptedRef.current && (isPlayingRef.current || isLoadingRef.current)) {
       setIsPlaying(false);
@@ -183,10 +217,23 @@ function App() {
     localStorage.setItem("radio-language", language);
     localStorage.setItem("radio-theme-mode", themeMode);
     localStorage.setItem("radio-station", selectedStationId);
+    localStorage.setItem("radio-font-scale", String(fontScale));
+    localStorage.setItem("radio-high-contrast", String(highContrast));
+    localStorage.setItem("radio-reduced-motion", String(reducedMotionMode));
     document.documentElement.lang = t.htmlLang;
     document.documentElement.style.colorScheme = themeMode;
     document.title = selectedStationId === "nazdrave" ? t.station : `${stationName} | ${t.station}`;
-  }, [language, selectedStationId, stationName, t.htmlLang, t.station, themeMode]);
+  }, [
+    fontScale,
+    highContrast,
+    language,
+    reducedMotionMode,
+    selectedStationId,
+    stationName,
+    t.htmlLang,
+    t.station,
+    themeMode,
+  ]);
 
   useEffect(() => {
     if (STATIONS[selectedStationId]) {
@@ -241,6 +288,7 @@ function App() {
 
     const onPlaying = () => {
       silentRefreshRef.current = false;
+      retryAttemptCountRef.current = 0;
       clearBufferingIndicatorTimer();
       clearRetryTimer();
       clearPlaybackStartTimer();
@@ -412,6 +460,7 @@ function App() {
     clearStreamRefreshTimer();
     setTrack(null);
     setError("");
+    retryAttemptCountRef.current = 0;
     silentRefreshRef.current = false;
     setIsPlaying(false);
     audio.pause();
@@ -611,6 +660,20 @@ function App() {
   }
 
   function scheduleRetry(stationId, streamIndex) {
+    retryAttemptCountRef.current += 1;
+
+    if (retryAttemptCountRef.current > MAX_STREAM_RETRY_ATTEMPTS) {
+      clearRetryTimer();
+      clearPlaybackStartTimer();
+      clearBufferingIndicatorTimer();
+      clearStreamRefreshTimer();
+      silentRefreshRef.current = false;
+      setIsLoading(false);
+      setIsPlaying(false);
+      setError(t.error);
+      return;
+    }
+
     const nextStreamIndex = getRetryStreamIndex(stationId, streamIndex);
     const retryDelay = nextStreamIndex === streamIndex ? SAME_STREAM_RETRY_DELAY_MS : NEXT_STREAM_RETRY_DELAY_MS;
 
@@ -651,6 +714,10 @@ function App() {
     clearBufferingIndicatorTimer();
     clearStreamRefreshTimer();
     setError("");
+
+    if (options.silentRefresh !== true) {
+      retryAttemptCountRef.current = 0;
+    }
 
     if (!silentRefreshRef.current) {
       setIsLoading(true);
@@ -730,6 +797,8 @@ function App() {
   const shellClasses = [
     "page-shell",
     `mode-${themeMode}`,
+    highContrast ? "a11y-high-contrast" : "",
+    reducedMotionMode ? "a11y-reduced-motion" : "",
     showStickyPlayer ? "has-sticky-player" : "",
   ].filter(Boolean).join(" ");
 
@@ -1208,7 +1277,7 @@ function App() {
       };
 
   return (
-    <div className={shellClasses}>
+    <div className={shellClasses} style={{ "--user-font-scale": fontScale }}>
       <a className="skip-link" href="#main-content">
         {t.skipToContent}
       </a>
@@ -1219,7 +1288,14 @@ function App() {
 
       <header className="site-header">
         <a className="brand" href="#main-content" aria-label={t.station}>
-          <img src="/logo-client.svg" alt="" className="brand-logo" aria-hidden="true" />
+          <img
+            src="/logo-client.svg"
+            alt=""
+            className="brand-logo"
+            aria-hidden="true"
+            width="72"
+            height="72"
+          />
           <div className="brand-copy">
             <span className="eyebrow">{pageCopy.headerEyebrow}</span>
             <strong>{t.station}</strong>
@@ -1281,6 +1357,8 @@ function App() {
                   src={language === "bg" ? "/lang-en.svg" : "/lang-bg.svg"}
                   alt=""
                   aria-hidden="true"
+                  width="18"
+                  height="18"
                 />
                 <span className="lang-text">{language === "bg" ? "EN" : "BG"}</span>
               </button>
@@ -1382,6 +1460,8 @@ function App() {
                         src={station.id === "gold" ? "/station-gold.svg" : "/station-nazdrave.svg"}
                         alt=""
                         aria-hidden="true"
+                        width="22"
+                        height="22"
                       />
                     </span>
                     <span className="station-button-content">
@@ -1474,6 +1554,19 @@ function App() {
             >
               {statusMessage}
             </p>
+            {error ? (
+              <div className="stream-fallback">
+                <p>{t.streamFallbackTitle}</p>
+                <a
+                  className="button button-secondary"
+                  href={stationPlaylistUrl}
+                  download
+                  aria-label={t.openInExternalPlayer}
+                >
+                  {t.openInExternalPlayer}
+                </a>
+              </div>
+            ) : null}
           </section>
         </div>
 
@@ -1550,7 +1643,7 @@ function App() {
           <div className="testimonials-grid">
             {pageCopy.testimonials.map((testimonial) => (
               <article className="testimonial-card" key={`${testimonial.name}-${testimonial.role}`}>
-                <blockquote className="testimonial-quote">"{testimonial.quote}"</blockquote>
+                <blockquote className="testimonial-quote">“{testimonial.quote}”</blockquote>
                 <p className="testimonial-name">{testimonial.name}</p>
                 <p className="testimonial-role">{testimonial.role}</p>
               </article>
@@ -1573,14 +1666,35 @@ function App() {
             <h2>{pageCopy.socialHeading}</h2>
             <p>{pageCopy.socialText}</p>
             <div className="contact-actions">
-              <a href="https://www.facebook.com/folkradionazdrave" target="_blank" rel="noreferrer noopener">
-                {t.facebook}
+              <a
+                className="social-link"
+                href="https://www.facebook.com/folkradionazdrave"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label={t.socialFacebookLabel}
+              >
+                <FacebookIcon />
+                <span>{t.facebook}</span>
               </a>
-              <a href="https://www.youtube.com/@dimitarzahariev8926" target="_blank" rel="noreferrer noopener">
-                {t.youtube}
+              <a
+                className="social-link"
+                href="https://www.youtube.com/@dimitarzahariev8926"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label={t.socialYoutubeLabel}
+              >
+                <YoutubeIcon />
+                <span>{t.youtube}</span>
               </a>
-              <a href="https://www.tiktok.com/@mitaka.power" target="_blank" rel="noreferrer noopener">
-                {t.tiktok}
+              <a
+                className="social-link"
+                href="https://www.tiktok.com/@mitaka.power"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label={t.socialTiktokLabel}
+              >
+                <TiktokIcon />
+                <span>{t.tiktok}</span>
               </a>
             </div>
           </article>
@@ -1612,6 +1726,8 @@ function App() {
             src={selectedStationId === "gold" ? "/station-gold.svg" : "/station-nazdrave.svg"}
             alt=""
             aria-hidden="true"
+            width="22"
+            height="22"
           />
         </span>
 
@@ -1631,7 +1747,7 @@ function App() {
             aria-label={isPlaying ? t.pause : t.play}
             tabIndex={showStickyPlayer ? 0 : -1}
           >
-            {isLoading ? "..." : isPlaying ? t.pause : t.play}
+            {isLoading ? "…" : isPlaying ? t.pause : t.play}
           </button>
           <button
             type="button"
@@ -1658,6 +1774,52 @@ function App() {
         </div>
       </div>
 
+      <div className={`accessibility-widget ${accessibilityOpen ? "is-open" : ""}`}>
+        <button
+          type="button"
+          className="accessibility-trigger"
+          aria-label={accessibilityOpen ? t.accessibilityClose : t.accessibilityOpen}
+          aria-expanded={accessibilityOpen}
+          onClick={() => setAccessibilityOpen((current) => !current)}
+        >
+          <span aria-hidden="true">A11Y</span>
+          <span className="sr-only">{t.accessibilityWidget}</span>
+        </button>
+        <div className="accessibility-panel" role="region" aria-label={t.accessibilityWidget}>
+          <p>{t.accessibilityPanelTitle}</p>
+          <div className="accessibility-controls">
+            <button
+              type="button"
+              onClick={() => setFontScale((current) => Math.max(0.95, Number((current - 0.05).toFixed(2))))}
+              aria-label={t.decreaseTextSize}
+            >
+              A-
+            </button>
+            <button
+              type="button"
+              onClick={() => setFontScale((current) => Math.min(1.2, Number((current + 0.05).toFixed(2))))}
+              aria-label={t.increaseTextSize}
+            >
+              A+
+            </button>
+            <button
+              type="button"
+              onClick={() => setHighContrast((current) => !current)}
+              aria-label={highContrast ? t.disableHighContrast : t.enableHighContrast}
+            >
+              {highContrast ? "AA+" : "AA"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setReducedMotionMode((current) => !current)}
+              aria-label={reducedMotionMode ? t.disableReducedMotion : t.enableReducedMotion}
+            >
+              {reducedMotionMode ? "Motion Off" : "Motion On"}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <button
         type="button"
         className="language-float"
@@ -1669,6 +1831,8 @@ function App() {
           src={language === "bg" ? "/lang-en.svg" : "/lang-bg.svg"}
           alt=""
           aria-hidden="true"
+          width="18"
+          height="18"
         />
         <span className="lang-text">{language === "bg" ? "EN" : "BG"}</span>
       </button>

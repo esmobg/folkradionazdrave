@@ -7,6 +7,7 @@
     "dev": "node server.mjs",
     "build": "vite build && node scripts/inline-built-css.mjs",
     "preview": "node server.mjs --production",
+    "test:e2e": "playwright test",
     "check:i18n": "node scripts/check-i18n.mjs --report reviews/i18n-results.json",
     "qa:manual": "node scripts/run-manual-qa.mjs",
     "qa:a11y": "node scripts/run-accessibility-qa.mjs",
@@ -21,6 +22,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@vitejs/plugin-react": "^5.0.4",
     "playwright": "^1.58.2",
     "vite": "^7.3.2"
