@@ -1,0 +1,15 @@
+{
+  "id": "stream-bandwidth-2026-05-22",
+  "label": "7-day stream migration bandwidth watch",
+  "startedAt": "2026-05-22T10:40:48.228Z",
+  "endsAt": "2026-05-29T10:40:48.229Z",
+  "durationDays": 7,
+  "goal": "Track Netlify bandwidth + Functions usage drop after Cloudflare Worker stream cutover",
+  "siteId": "08c0e2ef-126d-4f1f-a024-6bb17089f1e1",
+  "accountSlug": "ismail-ismailov",
+  "accountId": "695d226550fcd4116302f8b0",
+  "cloudflareAccountId": "117e983e7b4024dd353060ec2fb7555a",
+  "workerName": "folkradio-stream-proxy",
+  "siteUrl": "https://folkradionazdrave.com",
+  "streamUrl": "https://folkradio-stream-proxy.ismail-ismailov.workers.dev/api/stream/nazdrave"
+}

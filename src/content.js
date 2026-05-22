@@ -27,26 +27,78 @@ function appendQueryParam(url, key, value) {
 function isProxyBackedStreamUrl(url, fallbackPath) {
   const normalizedUrl = String(url).trim();
 
-  return (
-    normalizedUrl === fallbackPath ||
-    normalizedUrl.startsWith(`${fallbackPath}?`) ||
-    normalizedUrl.endsWith(fallbackPath) ||
-    normalizedUrl.includes(`${fallbackPath}?`)
+  if (typeof window === "undefined") {
+    return normalizedUrl === fallbackPath || normalizedUrl.startsWith(`${fallbackPath}?`);
+  }
+
+  try {
+    const resolved = new URL(normalizedUrl, window.location.origin);
+    return resolved.origin === window.location.origin && resolved.pathname === fallbackPath;
+  } catch {
+    return false;
+  }
+}
+
+function isExternalStreamProxyUrl(url) {
+  const normalizedUrl = String(url).trim();
+
+  if (!normalizedUrl || !/^https:\/\//i.test(normalizedUrl)) {
+    return false;
+  }
+
+  try {
+    const resolved = new URL(normalizedUrl);
+
+    if (typeof window !== "undefined" && resolved.origin === window.location.origin) {
+      return false;
+    }
+
+    return resolved.pathname === "/api/stream/nazdrave" || resolved.pathname === "/api/stream/gold";
+  } catch {
+    return false;
+  }
+}
+
+function createSameOriginFallbackUrls(fallbackPath, variantCount) {
+  if (typeof window === "undefined") {
+    return [fallbackPath];
+  }
+
+  const sameOriginUrl = new URL(fallbackPath, window.location.origin).toString();
+
+  return Array.from({ length: variantCount }, (_value, index) =>
+    appendQueryParam(sameOriginUrl, "client", index),
   );
 }
 
-function createRetryableStreamUrls(configValue, fallbackPath, variantCount = 4) {
-  const streamUrl = getBrowserSafeStreamUrl(configValue, fallbackPath);
+function createRetryableStreamUrls(configValue, fallbackPath, variantCount = 1) {
+  const primaryUrl = getBrowserSafeStreamUrl(configValue, fallbackPath);
 
-  if (!isProxyBackedStreamUrl(streamUrl, fallbackPath)) {
-    return [streamUrl];
+  if (isExternalStreamProxyUrl(primaryUrl)) {
+    return [primaryUrl, ...createSameOriginFallbackUrls(fallbackPath, variantCount)];
   }
 
-  return Array.from(
-    new Set(
-      Array.from({ length: variantCount }, (_value, index) => appendQueryParam(streamUrl, "client", index)),
-    ),
-  );
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    const sameOriginUrl = new URL(fallbackPath, window.location.origin).toString();
+
+    if (isProxyBackedStreamUrl(sameOriginUrl, fallbackPath)) {
+      return createSameOriginFallbackUrls(fallbackPath, variantCount);
+    }
+
+    return [sameOriginUrl];
+  }
+
+  const urls = [];
+
+  if (isProxyBackedStreamUrl(primaryUrl, fallbackPath)) {
+    for (let index = 0; index < variantCount; index += 1) {
+      urls.push(appendQueryParam(primaryUrl, "client", index));
+    }
+  } else {
+    urls.push(primaryUrl);
+  }
+
+  return [...new Set(urls)];
 }
 
 const goldStreamUrls = createRetryableStreamUrls(runtimeEnv.VITE_GOLD_STREAM_URL, "/api/stream/gold");

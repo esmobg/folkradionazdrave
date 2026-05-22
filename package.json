@@ -6,6 +6,15 @@
   "scripts": {
     "dev": "node server.mjs",
     "build": "vite build && node scripts/inline-built-css.mjs",
+    "optimize:images": "node scripts/optimize-images.mjs",
+    "deploy:stream-worker": "node scripts/deploy-stream-worker.mjs",
+    "deploy:stream-worker:run": "wrangler deploy",
+    "setup:stream-dns": "node scripts/setup-stream-dns.mjs",
+    "monitor:bandwidth:snapshot": "node scripts/bandwidth-snapshot.mjs",
+    "monitor:bandwidth:report": "node scripts/bandwidth-report.mjs",
+    "monitor:bandwidth:bot": "node scripts/bandwidth-monitor-bot.mjs",
+    "monitor:bandwidth:loop": "node scripts/bandwidth-monitor-bot.mjs",
+    "monitor:bandwidth:start": "node scripts/bandwidth-snapshot.mjs && node scripts/bandwidth-report.mjs",
     "preview": "node server.mjs --production",
     "test:e2e": "playwright test",
     "check:i18n": "node scripts/check-i18n.mjs --report reviews/i18n-results.json",
@@ -25,7 +34,9 @@
     "@playwright/test": "^1.59.1",
     "@vitejs/plugin-react": "^5.0.4",
     "playwright": "^1.58.2",
-    "vite": "^7.3.2"
+    "sharp": "^0.34.2",
+    "vite": "^7.3.2",
+    "wrangler": "^4.24.0"
   },
   "overrides": {
     "path-to-regexp": "^8.4.2",

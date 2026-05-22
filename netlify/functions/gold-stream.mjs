@@ -2,8 +2,8 @@ import { spawn } from "node:child_process";
 import { PassThrough, Readable } from "node:stream";
 
 const GOLD_RADIO_STREAMS = [
-  "http://92.247.130.252:8030",
   "http://78.83.177.106:8020",
+  "http://92.247.130.252:8030",
 ];
 const CONNECT_TIMEOUT_SECONDS = "1.25";
 const FIRST_CHUNK_TIMEOUT_MS = 1400;

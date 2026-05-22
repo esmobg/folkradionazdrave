@@ -1,4 +1,4 @@
-const STREAM_URLS = ["http://92.247.130.252:8030", "http://78.83.177.106:8020"];
+const STREAM_URLS = ["http://78.83.177.106:8020", "http://92.247.130.252:8030"];
 
 const SAFE_ICY_HEADERS = ["icy-name", "icy-description", "icy-genre", "icy-url", "icy-br"];
 

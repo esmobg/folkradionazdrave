@@ -1,0 +1,9 @@
+name = "folkradio-stream-proxy"
+main = "workers/stream-proxy.mjs"
+compatibility_date = "2024-11-01"
+workers_dev = true
+
+[[routes]]
+pattern = "live.folkradionazdrave.com"
+custom_domain = true
+zone_name = "folkradionazdrave.com"
