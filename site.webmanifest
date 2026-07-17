@@ -1,0 +1,26 @@
+{
+  "name": "Фолк Радио Наздраве",
+  "short_name": "Наздраве",
+  "description": "Поп-фолк, народна и балканска музика онлайн — слушай Фолк Радио Наздраве на живо.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1d120f",
+  "theme_color": "#1d120f",
+  "categories": ["music", "entertainment"],
+  "lang": "bg",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
