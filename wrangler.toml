@@ -7,3 +7,7 @@ workers_dev = true
 pattern = "live.folkradionazdrave.com"
 custom_domain = true
 zone_name = "folkradionazdrave.com"
+
+# Static site: deploy with `npm run deploy:site`
+# (wrangler pages deploy dist --project-name=folkradio-nazdrave)
+# Pages uses public/_worker.js for same-origin /api/stream/* plus public/_headers and public/_redirects.

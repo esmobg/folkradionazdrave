@@ -1,8 +1,8 @@
 {
   "baseUrl": "http://127.0.0.1:4280",
-  "checkedAt": "2026-05-22T10:51:57.116Z",
+  "checkedAt": "2026-07-17T15:10:02.097Z",
   "desktop": {
-    "initialHeading": "Фолк Радио Наздраве събира поп-фолк, народна музика и балкански ритми в едно живо онлайн слушане.",
+    "initialHeading": "Фолк Радио Наздраве",
     "initialLang": "bg",
     "initialShellClass": "page-shell mode-dark",
     "initialStatus": "Плеърът е на пауза.",
@@ -13,7 +13,7 @@
     "appearanceStorage": {
       "themeMode": "light"
     },
-    "englishHeading": "Folk Radio Nazdrave brings pop-folk, folk, and Balkan rhythms together in one live online stream.",
+    "englishHeading": "Folk Radio Nazdrave",
     "englishLang": "en",
     "socialLinks": [
       {
@@ -41,7 +41,7 @@
     "stationAfterReset": "Фолк Радио Наздраве",
     "playerStatus": "Плеърът свири.",
     "playerButtonText": "Пауза",
-    "playerStartupMs": 521,
+    "playerStartupMs": 1029,
     "nazdravePlaybackWindow": {
       "stable": true,
       "status": "Плеърът свири.",
@@ -74,7 +74,7 @@
     "goldNoteVisible": true,
     "goldStatus": "Плеърът свири.",
     "goldButtonText": "Пауза",
-    "goldStartupMs": 548,
+    "goldStartupMs": 589,
     "goldPlaybackWindow": {
       "stable": true,
       "status": "Плеърът свири.",

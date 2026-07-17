@@ -5,7 +5,7 @@ const NAZDRAVE_STREAM_URLS = [
   "http://92.247.130.252:8066/",
 ];
 
-const GOLD_STREAM_URLS = ["http://92.247.130.252:8030", "http://78.83.177.106:8020"];
+const GOLD_STREAM_URLS = ["http://78.83.177.106:8020", "http://92.247.130.252:8030"];
 const SAFE_ICY_HEADERS = ["icy-name", "icy-description", "icy-genre", "icy-url", "icy-br"];
 
 function getSafeAudioContentType(contentType) {
@@ -50,6 +50,7 @@ async function proxyStream(urls) {
       const headers = new Headers();
       headers.set("content-type", safeContentType);
       headers.set("cache-control", "no-store");
+      headers.set("access-control-allow-origin", "*");
 
       for (const header of SAFE_ICY_HEADERS) {
         const value = upstreamResponse.headers.get(header);
@@ -78,6 +79,17 @@ async function proxyStream(urls) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    if (request.method === "OPTIONS" && url.pathname.startsWith("/api/stream/")) {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-methods": "GET, HEAD, OPTIONS",
+          "access-control-max-age": "86400",
+        },
+      });
+    }
 
     if (url.pathname === "/api/stream/nazdrave") {
       return proxyStream(NAZDRAVE_STREAM_URLS);

@@ -9,6 +9,7 @@
     "optimize:images": "node scripts/optimize-images.mjs",
     "deploy:stream-worker": "node scripts/deploy-stream-worker.mjs",
     "deploy:stream-worker:run": "wrangler deploy",
+    "deploy:site": "node scripts/deploy-site.mjs",
     "setup:stream-dns": "node scripts/setup-stream-dns.mjs",
     "monitor:bandwidth:snapshot": "node scripts/bandwidth-snapshot.mjs",
     "monitor:bandwidth:report": "node scripts/bandwidth-report.mjs",

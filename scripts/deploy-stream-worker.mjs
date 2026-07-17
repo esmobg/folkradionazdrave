@@ -5,13 +5,16 @@ Folk Radio stream setup
 =======================
 
 Current production stream host:
-  https://folkradio-stream-proxy.ismail-ismailov.workers.dev/api/stream/{nazdrave|gold}
+  https://live.folkradionazdrave.com/api/stream/{nazdrave|gold}
 
-Cloudflare Worker custom domain (ready after zone activation):
-  live.folkradionazdrave.com
+Fallback workers.dev URL:
+  https://folkradio-stream-proxy.ismail-ismailov.workers.dev/api/stream/{nazdrave|gold}
 
 Deploy worker:
   npm run deploy:stream-worker:run
+
+Deploy static site (Cloudflare Pages):
+  npm run deploy:site
 
 Verify worker playback:
   node scripts/debug-stream-url.mjs
@@ -22,16 +25,11 @@ Verify site playback:
 Cloudflare zone status:
   node scripts/cf-list-zones.mjs
 
-Next step to enable live.folkradionazdrave.com:
-  1. At your domain registrar, change nameservers to:
-     emerson.ns.cloudflare.com
-     mallory.ns.cloudflare.com
-  2. In Cloudflare DNS, recreate apex/www records pointing to Netlify
-  3. Wait for zone status "active"
-  4. live.folkradionazdrave.com should serve the worker automatically
+DNS for the website (after Pages deploy):
+  1. In Cloudflare Pages, attach custom domain folkradionazdrave.com (and www if needed)
+  2. Apex/www should resolve to Cloudflare Pages — not Netlify
+  3. Keep live.folkradionazdrave.com on the stream Worker
 
 Note about stream.folkradionazdrave.com:
-  Cloudflare still blocks this hostname (error 100117) because it previously had
-  external DNS records. Use live.folkradionazdrave.com after zone activation, or
-  keep workers.dev as the primary URL.
+  Prefer live.folkradionazdrave.com. Some hostnames may still be blocked from prior DNS history.
 `);

@@ -1,0 +1,15 @@
+RewriteEngine On
+RewriteBase /
+
+# Allow audio stream from Cloudflare Worker
+<IfModule mod_headers.c>
+  Header always set Content-Security-Policy "default-src 'self'; connect-src 'self' https://live.folkradionazdrave.com https://stream.folkradionazdrave.com https://folkradio-stream-proxy.ismail-ismailov.workers.dev; media-src 'self' https://live.folkradionazdrave.com https://stream.folkradionazdrave.com https://folkradio-stream-proxy.ismail-ismailov.workers.dev blob:; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+  Header always set Referrer-Policy "no-referrer"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+</IfModule>
+
+# SPA fallback
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]

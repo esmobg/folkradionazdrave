@@ -198,24 +198,31 @@ async function captureDesktop(browser) {
   }));
   await page.locator("body").click({ position: { x: 40, y: 40 } });
 
-  await page.locator(".segment-button.active").focus();
+  const themeTrigger = page.locator(".theme-menu-trigger");
+  const themeOptions = page.locator(".theme-menu-options .segment-button");
+
+  await themeTrigger.click();
+  await page.waitForTimeout(150);
+  await themeOptions.filter({ hasText: bg.darkMode }).focus();
   await page.keyboard.press("ArrowRight");
   await page.waitForTimeout(200);
   const lightShellClass = await page.locator(".page-shell").getAttribute("class");
-  const themeAfterArrow = (await page.locator('.segment-button[aria-checked="true"]').textContent())?.trim() ?? "";
+  const themeAfterArrow = (await page.locator('.theme-menu-options .segment-button[aria-checked="true"]').textContent())?.trim() ?? "";
 
   await page.keyboard.press("ArrowLeft");
   await page.waitForTimeout(200);
   const darkShellClass = await page.locator(".page-shell").getAttribute("class");
-  const themeAfterReset = (await page.locator('.segment-button[aria-checked="true"]').textContent())?.trim() ?? "";
+  const themeAfterReset = (await page.locator('.theme-menu-options .segment-button[aria-checked="true"]').textContent())?.trim() ?? "";
 
-  await page.locator(".segment-button", { hasText: bg.lightMode }).click();
+  await themeOptions.filter({ hasText: bg.lightMode }).click();
   await page.waitForTimeout(200);
   const appearanceStorage = await page.evaluate(() => ({
     themeMode: window.localStorage.getItem("radio-theme-mode"),
   }));
 
-  await page.locator(".segment-button", { hasText: bg.darkMode }).click();
+  await themeTrigger.click();
+  await page.waitForTimeout(150);
+  await themeOptions.filter({ hasText: bg.darkMode }).click();
   await page.waitForTimeout(200);
 
   await page.locator(".language-toggle").click();
@@ -268,6 +275,7 @@ async function captureDesktop(browser) {
   const muteShortcutReset = (await page.locator(".icon-button").getAttribute("aria-pressed")) === "false";
 
   const volumeBeforeKeys = await readVolumeState(page);
+  await page.locator("#player .slider-wrap input[type='range']").focus();
   await dispatchShortcut(page, "ArrowDown");
   const volumeAfterDown = await readVolumeState(page);
   await dispatchShortcut(page, "ArrowUp");
@@ -288,6 +296,7 @@ async function captureDesktop(browser) {
 
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await page.waitForTimeout(300);
+  await page.locator(".sticky-player.sticky-visible").waitFor({ state: "attached", timeout: 5000 }).catch(() => null);
   const stickyVisible = (await page.locator(".sticky-player").getAttribute("class"))?.includes("sticky-visible") ?? false;
   await takeScreenshotWithRetry(page, path.join(outputDir, "desktop-focus.png"), { fullPage: false });
 

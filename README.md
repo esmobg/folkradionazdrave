@@ -7,7 +7,7 @@ Live web player for **Folk Radio Nazdrave** and **Gold Radio** — pop-folk, fol
 
 ## Tech stack
 
-React 18 + Vite, Express dev server, Netlify hosting, Cloudflare Worker for audio streaming.
+React 18 + Vite, Express (local/dev), **Cloudflare Pages** for the static site, **Cloudflare Worker** for audio streaming.
 
 ## Run locally
 
@@ -20,10 +20,28 @@ Open http://localhost:3000 (or the port shown in the terminal).
 
 ## Streaming architecture
 
-- **Primary:** Cloudflare Worker at `https://folkradio-stream-proxy.ismail-ismailov.workers.dev/api/stream/{nazdrave|gold}`
-- **Fallback:** Netlify Functions at `/api/stream/nazdrave` and `/api/stream/gold` on the production site
+- **Primary:** Cloudflare Worker at `https://live.folkradionazdrave.com/api/stream/{nazdrave|gold}`
+- **Same-origin on Pages:** `public/_worker.js` can proxy `/api/stream/*` when relative URLs are used
+- Production build vars: optional Worker URLs in Cloudflare Pages env (see `.env.production.example`). Default is same-origin `/api/stream/*` via Pages `_worker.js` or local Express — not Netlify Functions.
 
-Production build variables are set in `netlify.toml`. Deploy the worker with `npm run deploy:stream-worker`.
+Deploy the stream worker with `npm run deploy:stream-worker`. Deploy the site with `npm run deploy:site`.
+
+## Deploy (Cloudflare Pages)
+
+```bash
+npx wrangler login
+npm run deploy:site
+```
+
+This builds to `dist/` and runs `wrangler pages deploy`. After the first deploy:
+
+1. In Cloudflare Pages, attach custom domain `folkradionazdrave.com` (and `www` if needed)
+2. Confirm apex/www resolve to Pages — not Netlify
+3. Keep `live.folkradionazdrave.com` on the stream Worker
+4. Once Pages is stable, disable or delete the Netlify site so bandwidth stops growing there
+
+Optional: set `CF_PAGES_PROJECT` if the Pages project name differs from `folkradio-nazdrave`.
+Optional: set `VITE_NAZDRAVE_STREAM_URL` / `VITE_GOLD_STREAM_URL` in Pages env to force the dedicated Worker (see `.env.production.example`).
 
 ## Accessibility
 
@@ -52,4 +70,5 @@ Results are written to `reviews/accessibility-gate-results.json`. The check cove
 | `npm run preview` | Serve production build locally |
 | `npm run test:e2e` | Playwright smoke tests |
 | `npm run qa:a11y` | Accessibility gate (keyboard, focus, mobile) |
+| `npm run deploy:site` | Build + deploy static site to Cloudflare Pages |
 | `npm run deploy:stream-worker` | Deploy Cloudflare stream proxy |

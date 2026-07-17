@@ -2,30 +2,14 @@
 command = "npm run build"
 publish = "dist"
 
-[functions]
-directory = "netlify/functions"
+# Legacy Netlify hosting — prefer Cloudflare Pages (`npm run deploy:site`).
+# Netlify Functions disabled so stream traffic cannot burn Netlify bandwidth.
 
 [build.environment]
-VITE_GOLD_STREAM_URL = "https://folkradio-stream-proxy.ismail-ismailov.workers.dev/api/stream/gold"
-VITE_NAZDRAVE_STREAM_URL = "https://folkradio-stream-proxy.ismail-ismailov.workers.dev/api/stream/nazdrave"
-
-[[redirects]]
-from = "/api/stream/nazdrave"
-to = "/.netlify/functions/nazdrave-stream"
-status = 200
-force = true
-
-[[redirects]]
-from = "/api/stream/gold"
-to = "/.netlify/functions/gold-stream"
-status = 200
-force = true
-
-[[headers]]
-for = "/api/stream/*"
-
-[headers.values]
-Access-Control-Allow-Origin = "*"
+# Prefer same-origin Pages/_worker.js streams locally and on Cloudflare Pages.
+# Optional override to the dedicated Worker:
+# VITE_GOLD_STREAM_URL = "https://live.folkradionazdrave.com/api/stream/gold"
+# VITE_NAZDRAVE_STREAM_URL = "https://live.folkradionazdrave.com/api/stream/nazdrave"
 
 [[redirects]]
 from = "/*"
@@ -79,22 +63,22 @@ Cache-Control = "public, max-age=31536000, immutable"
 for = "/*.svg"
 
 [headers.values]
-Cache-Control = "public, max-age=604800"
+Cache-Control = "public, max-age=86400"
 
 [[headers]]
-for = "/logo.png"
+for = "/*.png"
 
 [headers.values]
-Cache-Control = "public, max-age=604800"
+Cache-Control = "public, max-age=86400"
 
 [[headers]]
-for = "/icon-192.png"
+for = "/*.jpg"
 
 [headers.values]
-Cache-Control = "public, max-age=604800"
+Cache-Control = "public, max-age=86400"
 
 [[headers]]
-for = "/og-image.jpg"
+for = "/*.woff2"
 
 [headers.values]
-Cache-Control = "public, max-age=604800"
+Cache-Control = "public, max-age=31536000, immutable"

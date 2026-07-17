@@ -31,7 +31,7 @@ const NAZDRAVE_STREAM_SOURCE_MAP = Object.freeze({
   "8066-slash": NAZDRAVE_STREAM_URLS[3],
 });
 const NAZDRAVE_NOW_PLAYING_URL = "https://radionazdrave.replit.app/api/now-playing";
-const GOLD_RADIO_STREAMS = ["http://92.247.130.252:8030", "http://78.83.177.106:8020"];
+const GOLD_RADIO_STREAMS = ["http://78.83.177.106:8020", "http://92.247.130.252:8030"];
 const curlCommand = process.platform === "win32" ? "curl.exe" : "curl";
 const MAX_GOLD_STREAM_CONNECTIONS = getPositiveIntegerEnvValue("MAX_GOLD_STREAM_CONNECTIONS", 25);
 const LEGACY_STREAM_CONNECT_TIMEOUT_SECONDS = "1.25";
